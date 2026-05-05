@@ -266,52 +266,11 @@ def _construir_itens(pedidos: list[dict], detalhes: dict, vendedores_map: dict) 
             vendedor    = _vendedor_nome(detalhe, vendedores_map) if detalhe else p.get("vendedor_lista", "Venda Direta")
             itens       = detalhe.get("itens") or []
 
-            # DEBUG TEMPORÁRIO: dump completo do pedido 13995
-            if str(p.get("numero")) == "13995":
-                print("--- RESUMO PEDIDO 13995 (listagem) ---")
-                print(json.dumps(p, indent=2, default=str))
-                print("--- DETALHE PEDIDO 13995 (API) ---")
-                print(json.dumps(detalhe, indent=2, default=str))
-                print("-----------------------------------")
-
-            # ── Extrai nome da loja — 3 tentativas ──────────────────────────
-            loja_nome = ""
-
-            # 1. detalhe["loja"]["descricao"] ou ["nome"]
-            loja_obj = detalhe.get("loja") or {}
-            if isinstance(loja_obj, dict):
-                loja_nome = (
-                    loja_obj.get("descricao") or
-                    loja_obj.get("nome") or
-                    loja_obj.get("name") or ""
-                ).strip()
-            elif isinstance(loja_obj, str):
-                loja_nome = loja_obj.strip()
-
-            # 2. detalhe["canais_venda"][0]["nome"]
-            if not loja_nome:
-                canais = detalhe.get("canais_venda") or []
-                if isinstance(canais, list) and canais:
-                    canal0 = canais[0]
-                    if isinstance(canal0, dict):
-                        loja_nome = (
-                            canal0.get("nome") or
-                            canal0.get("descricao") or ""
-                        ).strip()
-
-            # 3. detalhe["canal"]["descricao"] ou ["nome"]
-            if not loja_nome:
-                canal_obj = detalhe.get("canal") or {}
-                if isinstance(canal_obj, dict):
-                    loja_nome = (canal_obj.get("descricao") or canal_obj.get("nome") or "").strip()
-                elif isinstance(canal_obj, str):
-                    loja_nome = canal_obj.strip()
-
-            # Normaliza: qualquer valor com "whatsapp" ou "meta" → nome canônico
-            _loja_lower = loja_nome.lower()
-            if "whatsapp" in _loja_lower or "meta" in _loja_lower:
+            # ── Extrai loja por busca textual bruta no detalhe completo ────────
+            _detalhe_str = str(detalhe).lower()
+            if "whatsapp" in _detalhe_str or "meta ads" in _detalhe_str:
                 loja_nome = "WhatsApp - Meta Ads"
-            elif not loja_nome:
+            else:
                 loja_nome = "Outros"
 
             # ── Itens do pedido ──────────────────────────────────────────────
