@@ -89,27 +89,6 @@ def show(df):
     # ── Linhas Bling Direto (fonte de faturamento) ────────────────────────────
     df_bling = df[df["campaign_name"] == "Bling Direto"].copy()
 
-    # DEBUG PERMANENTE — lista de lojas únicas vindas do Bling
-    st.sidebar.subheader("DEBUG: Lojas no Bling")
-    st.sidebar.write(df_bling["loja"].unique().tolist())
-
-    # DEBUG: Botão para limpar cache Streamlit
-    st.sidebar.markdown("---")
-    if st.sidebar.button("🗑️ Limpar Cache de Dados"):
-        st.cache_data.clear()
-        st.sidebar.success("Cache limpo! Recarregando...")
-        st.rerun()
-
-    # DEBUG: Busca direta do pedido 13995 na API (ignora cache de disco)
-    st.sidebar.markdown("---")
-    if st.sidebar.button("🔍 Buscar pedido 13995 na API"):
-        from data.bling import get_venda_especifica
-        with st.sidebar:
-            with st.spinner("Consultando Bling..."):
-                _raw = get_venda_especifica("13995")
-            st.subheader("DEBUG: Pedido 13995 (JSON bruto)")
-            st.json(_raw)
-
     if df_bling.empty:
         st.info(
             "Sem dados de faturamento do Bling no período selecionado.  \n"

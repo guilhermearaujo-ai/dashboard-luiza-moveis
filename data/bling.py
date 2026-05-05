@@ -253,106 +253,116 @@ def _construir_itens(pedidos: list[dict], detalhes: dict, vendedores_map: dict) 
     rows = []
 
     for p in pedidos:
-        # ── data do pedido — se falhar, pula mas não derruba o loop ─────────
-        order_date = _parse_date(p.get("data"))
-        if order_date is None:
-            print(f"[Bling] Pedido {p.get('numero','?')}: data inválida '{p.get('data')}' — ignorado.")
-            continue
+        try:
+            # ── data do pedido ───────────────────────────────────────────────
+            order_date = _parse_date(p.get("data"))
+            if order_date is None:
+                print(f"[Bling] Pedido {p.get('numero','?')}: data inválida '{p.get('data')}' — ignorado.")
+                continue
 
-        order_num   = p.get("numero", str(p.get("id", "?")))
-        order_total = _to_float(p.get("total", 0))
-        detalhe     = detalhes.get(p.get("id"), {}) or {}
-        vendedor    = _vendedor_nome(detalhe, vendedores_map) if detalhe else p.get("vendedor_lista", "Venda Direta")
-        itens       = detalhe.get("itens") or []
+            order_num   = p.get("numero", str(p.get("id", "?")))
+            order_total = _to_float(p.get("total", 0))
+            detalhe     = detalhes.get(p.get("id"), {}) or {}
+            vendedor    = _vendedor_nome(detalhe, vendedores_map) if detalhe else p.get("vendedor_lista", "Venda Direta")
+            itens       = detalhe.get("itens") or []
 
-        # Extrai loja/canal do pedido (ex: "WhatsApp - Meta Ads")
-        loja_nome = ""
+            # ── Extrai nome da loja — 3 tentativas ──────────────────────────
+            loja_nome = ""
 
-        # 1. Campo "loja" (dict ou string)
-        loja_obj = detalhe.get("loja") or {}
-        if isinstance(loja_obj, dict):
-            loja_nome = (
-                loja_obj.get("descricao") or
-                loja_obj.get("nome") or
-                loja_obj.get("name") or ""
-            ).strip()
-        elif isinstance(loja_obj, str):
-            loja_nome = loja_obj.strip()
+            # 1. detalhe["loja"]["descricao"] ou ["nome"]
+            loja_obj = detalhe.get("loja") or {}
+            if isinstance(loja_obj, dict):
+                loja_nome = (
+                    loja_obj.get("descricao") or
+                    loja_obj.get("nome") or
+                    loja_obj.get("name") or ""
+                ).strip()
+            elif isinstance(loja_obj, str):
+                loja_nome = loja_obj.strip()
 
-        # 2. Fallback: "canais_venda" (lista)
-        if not loja_nome:
-            canais = detalhe.get("canais_venda") or []
-            if isinstance(canais, list) and canais:
-                canal = canais[0]
-                if isinstance(canal, dict):
-                    loja_nome = (
-                        canal.get("descricao") or
-                        canal.get("nome") or ""
-                    ).strip()
+            # 2. detalhe["canais_venda"][0]["nome"]
+            if not loja_nome:
+                canais = detalhe.get("canais_venda") or []
+                if isinstance(canais, list) and canais:
+                    canal0 = canais[0]
+                    if isinstance(canal0, dict):
+                        loja_nome = (
+                            canal0.get("nome") or
+                            canal0.get("descricao") or ""
+                        ).strip()
 
-        # 3. Fallback: campo "canal" (dict ou string)
-        if not loja_nome:
-            canal_obj = detalhe.get("canal") or {}
-            if isinstance(canal_obj, dict):
-                loja_nome = (canal_obj.get("descricao") or canal_obj.get("nome") or "").strip()
-            elif isinstance(canal_obj, str):
-                loja_nome = canal_obj.strip()
+            # 3. detalhe["canal"]["descricao"] ou ["nome"]
+            if not loja_nome:
+                canal_obj = detalhe.get("canal") or {}
+                if isinstance(canal_obj, dict):
+                    loja_nome = (canal_obj.get("descricao") or canal_obj.get("nome") or "").strip()
+                elif isinstance(canal_obj, str):
+                    loja_nome = canal_obj.strip()
 
-        if not loja_nome:
-            loja_nome = "Outros"
+            # Normaliza: qualquer valor com "whatsapp" ou "meta" → nome canônico
+            _loja_lower = loja_nome.lower()
+            if "whatsapp" in _loja_lower or "meta" in _loja_lower:
+                loja_nome = "WhatsApp - Meta Ads"
+            elif not loja_nome:
+                loja_nome = "Outros"
 
-        if itens:
-            items_sum = 0.0
-            for item in itens:
-                descricao  = (item.get("descricao") or "").strip() or "Produto sem descrição"
-                qty        = _to_float(item.get("quantidade", 1))
-                unit_price = _to_float(item.get("valor", 0))
-                line_total = round(qty * unit_price, 2)
-                items_sum += line_total
-                sku        = (item.get("codigo") or "").strip()
+            # ── Itens do pedido ──────────────────────────────────────────────
+            if itens:
+                items_sum = 0.0
+                for item in itens:
+                    descricao  = (item.get("descricao") or "").strip() or "Produto sem descrição"
+                    qty        = _to_float(item.get("quantidade", 1))
+                    unit_price = _to_float(item.get("valor", 0))
+                    line_total = round(qty * unit_price, 2)
+                    items_sum += line_total
+                    sku        = (item.get("codigo") or "").strip()
 
+                    rows.append({
+                        "date":         order_date,
+                        "order_id":     order_num,
+                        "product_name": descricao,
+                        "quantity":     qty,
+                        "unit_price":   unit_price,
+                        "total_price":  line_total,
+                        "vendedor":     vendedor,
+                        "loja":         loja_nome,
+                        "sku":          sku,
+                        "_bling_key":   normalize(descricao),
+                    })
+
+                # Ajuste de desconto / frete: preserva o total oficial
+                diff = round(order_total - items_sum, 2)
+                if abs(diff) > 0.05 and order_total > 0:
+                    rows.append({
+                        "date":         order_date,
+                        "order_id":     order_num,
+                        "product_name": "Desconto / Frete / Ajuste",
+                        "quantity":     1.0,
+                        "unit_price":   diff,
+                        "total_price":  diff,
+                        "vendedor":     vendedor,
+                        "loja":         loja_nome,
+                        "sku":          "",
+                        "_bling_key":   "desconto frete ajuste",
+                    })
+            else:
+                # Sem itens: registra o total do pedido como linha única
                 rows.append({
                     "date":         order_date,
                     "order_id":     order_num,
-                    "product_name": descricao,
-                    "quantity":     qty,
-                    "unit_price":   unit_price,
-                    "total_price":  line_total,
-                    "vendedor":     vendedor,
-                    "loja":         loja_nome,
-                    "sku":          sku,
-                    "_bling_key":   normalize(descricao),
-                })
-
-            # Ajuste de desconto / frete: preserva o total oficial
-            diff = round(order_total - items_sum, 2)
-            if abs(diff) > 0.05 and order_total > 0:
-                rows.append({
-                    "date":         order_date,
-                    "order_id":     order_num,
-                    "product_name": "Desconto / Frete / Ajuste",
+                    "product_name": "Outros / Não Identificado",
                     "quantity":     1.0,
-                    "unit_price":   diff,
-                    "total_price":  diff,
+                    "unit_price":   order_total,
+                    "total_price":  order_total,
                     "vendedor":     vendedor,
                     "loja":         loja_nome,
                     "sku":          "",
-                    "_bling_key":   "desconto frete ajuste",
+                    "_bling_key":   "outros nao identificado",
                 })
-        else:
-            # Sem itens: registra o total do pedido como linha única
-            rows.append({
-                "date":         order_date,
-                "order_id":     order_num,
-                "product_name": "Outros / Não Identificado",
-                "quantity":     1.0,
-                "unit_price":   order_total,
-                "total_price":  order_total,
-                "vendedor":     vendedor,
-                "loja":         loja_nome,
-                "sku":          "",
-                "_bling_key":   "outros nao identificado",
-            })
+
+        except Exception as exc:
+            print(f"[Bling] Pedido {p.get('numero', p.get('id', '?'))}: erro ao processar — {exc}. Ignorado.")
+            continue
 
     return rows
 
