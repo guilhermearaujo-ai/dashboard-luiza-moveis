@@ -93,6 +93,28 @@ def show(df):
     st.sidebar.subheader("DEBUG: Lojas no Bling")
     st.sidebar.write(df_bling["loja"].unique().tolist())
 
+    # DEBUG: JSON bruto do pedido 13995 para mapear campo 'loja' correto
+    import json as _json, os as _os
+    _cache_path = "data/bling_cache.json"
+    if _os.path.exists(_cache_path):
+        try:
+            with open(_cache_path) as _f:
+                _raw_cache = _json.load(_f)
+            _order_debug = None
+            for _oid, _det in _raw_cache.items():
+                if str(_det.get("numero", "")) == "13995":
+                    _order_debug = {"_cache_key": _oid, **_det}
+                    break
+            if _order_debug:
+                st.sidebar.subheader("DEBUG: Pedido 13995 (JSON bruto)")
+                st.sidebar.json(_order_debug)
+            else:
+                st.sidebar.warning("Pedido 13995 não encontrado no cache — filtre o período que o inclua.")
+        except Exception as _e:
+            st.sidebar.error(f"Erro ao ler cache Bling: {_e}")
+    else:
+        st.sidebar.warning("Cache Bling não encontrado (data/bling_cache.json).")
+
     if df_bling.empty:
         st.info(
             "Sem dados de faturamento do Bling no período selecionado.  \n"

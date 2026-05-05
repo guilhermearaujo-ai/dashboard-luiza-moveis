@@ -266,11 +266,38 @@ def _construir_itens(pedidos: list[dict], detalhes: dict, vendedores_map: dict) 
         itens       = detalhe.get("itens") or []
 
         # Extrai loja/canal do pedido (ex: "WhatsApp - Meta Ads")
+        loja_nome = ""
+
+        # 1. Campo "loja" (dict ou string)
         loja_obj = detalhe.get("loja") or {}
         if isinstance(loja_obj, dict):
-            loja_nome = (loja_obj.get("descricao") or "").strip()
-        else:
-            loja_nome = str(loja_obj).strip() if loja_obj else ""
+            loja_nome = (
+                loja_obj.get("descricao") or
+                loja_obj.get("nome") or
+                loja_obj.get("name") or ""
+            ).strip()
+        elif isinstance(loja_obj, str):
+            loja_nome = loja_obj.strip()
+
+        # 2. Fallback: "canais_venda" (lista)
+        if not loja_nome:
+            canais = detalhe.get("canais_venda") or []
+            if isinstance(canais, list) and canais:
+                canal = canais[0]
+                if isinstance(canal, dict):
+                    loja_nome = (
+                        canal.get("descricao") or
+                        canal.get("nome") or ""
+                    ).strip()
+
+        # 3. Fallback: campo "canal" (dict ou string)
+        if not loja_nome:
+            canal_obj = detalhe.get("canal") or {}
+            if isinstance(canal_obj, dict):
+                loja_nome = (canal_obj.get("descricao") or canal_obj.get("nome") or "").strip()
+            elif isinstance(canal_obj, str):
+                loja_nome = canal_obj.strip()
+
         if not loja_nome:
             loja_nome = "Outros"
 
