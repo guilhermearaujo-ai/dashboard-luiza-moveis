@@ -395,37 +395,14 @@ def load_data() -> pd.DataFrame:
 
     print(f"[Loader] Meta carregado: {len(meta)} linhas | {date_min} → {date_max}")
 
-    # ── DEBUG: verifica arquivo de token ──────────────────────────────────────
-    import os as _os
-    _tok = "bling_tokens.json"
-    _tok_exists = _os.path.exists(_tok)
-    st.sidebar.write(f"**Token file existe:** `{_tok_exists}` ({_tok})")
-    if _tok_exists:
-        import json as _json
-        try:
-            _tdata = _json.loads(open(_tok).read())
-            st.sidebar.write(f"**access_token:** `{'OK' if _tdata.get('access_token') else 'VAZIO'}`")
-            st.sidebar.write(f"**expires_at:** `{_tdata.get('expires_at', '?')}`")
-        except Exception as _e:
-            st.sidebar.write(f"**Erro ao ler token:** `{_e}`")
-
     try:
         bling = fetch_bling_orders(date_min, date_max)
         if bling.empty:
-            st.warning(
-                "⚠️ **Bling retornou 0 pedidos** no período — Faturamento será R$ 0.  \n"
-                "Verifique se há pedidos no Bling para o período coberto pelo Meta Ads "
-                f"(`{date_min}` → `{date_max}`).  \n"
-                "Se o token expirou, clique em **Desconectar Bling** e reconecte."
-            )
+            st.info("Nenhum pedido Bling encontrado no período — Faturamento será R$ 0.")
     except Exception as exc:
         msg = str(exc)
         print(f"[Loader] ERRO ao buscar Bling: {msg}")
-        st.warning(
-            f"⚠️ **Erro ao conectar ao Bling** — Faturamento será R$ 0.  \n"
-            f"`{msg[:400]}`  \n"
-            "Se o token expirou, clique em **Desconectar Bling** na barra lateral e reconecte."
-        )
+        st.warning(f"⚠️ Bling indisponível — {msg[:200]}")
         bling = pd.DataFrame()
 
     df = _merge(meta, bling)

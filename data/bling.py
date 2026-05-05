@@ -169,13 +169,6 @@ def _listar_pedidos(token: str, sd: str, ed: str) -> list[dict]:
             timeout=30,
         )
 
-        # ── DEBUG: exibe status e resumo da resposta na sidebar ─────────────
-        if page == 1:
-            print(f"[Bling-DEBUG] Página 1 — HTTP {resp.status_code}")
-            print(f"[Bling-DEBUG] Resposta (500 chars): {resp.text[:500]}")
-            st.sidebar.write(f"**Status API Bling:** `{resp.status_code}`")
-            st.sidebar.write(f"**Body (200 chars):** `{resp.text[:200]}`")
-
         if resp.status_code in (204, 404):
             print(f"[Bling] Página {page}: HTTP {resp.status_code} — sem mais dados.")
             break
@@ -198,10 +191,6 @@ def _listar_pedidos(token: str, sd: str, ed: str) -> list[dict]:
 
         payload = resp.json()
         data = payload.get("data", [])
-        if page == 1:
-            print(f"[Bling-DEBUG] Chaves do payload: {list(payload.keys())} | "
-                  f"Itens na página 1: {len(data)}")
-            st.sidebar.write(f"**Pedidos página 1:** `{len(data)}`")
         if not data:
             print(f"[Bling] Página {page}: lista vazia — fim da paginação.")
             break
@@ -349,12 +338,21 @@ def fetch_bling_orders(start_date: date, end_date: date) -> pd.DataFrame:
     - Fallback de produto: 'Outros / Não Identificado'.
     - Fallback de vendedor: 'Venda Direta'.
     """
+    # ── Valida limite de 360 dias da API do Bling ────────────────────────────
+    from datetime import timedelta
+    days_diff = (end_date - start_date).days
+    if days_diff > 360:
+        st.error(
+            f"O período selecionado ({days_diff} dias) excede o limite de 360 dias da API do Bling. "
+            "Ajuste os filtros de data para um intervalo menor."
+        )
+        return pd.DataFrame(columns=_COLUMNS)
+
     token = get_valid_access_token()
 
-    sd = "2024-01-01"   # DEBUG: forçado para range amplo (era 2026-01-01)
+    sd = start_date.strftime("%Y-%m-%d")
     ed = end_date.strftime("%Y-%m-%d")
     print(f"[Bling] Período: {sd} → {ed}")
-    st.sidebar.write(f"**Período Bling:** `{sd}` → `{ed}`")
 
     # ── Pré-carga de vendedores (1 chamada, mapa {id: nome}) ─────────────────
     vendedores_map = _fetch_vendedores(token)
