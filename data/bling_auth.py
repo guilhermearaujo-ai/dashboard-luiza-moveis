@@ -17,7 +17,7 @@ from urllib.parse import urlencode
 import requests
 from dotenv import load_dotenv
 
-_REDIRECT_URI = "http://localhost:8501"
+_REDIRECT_URI = os.getenv("BLING_REDIRECT_URI", "http://localhost:8501")
 _AUTH_URL     = "https://www.bling.com.br/Api/v3/oauth/authorize"
 _TOKEN_URL    = "https://www.bling.com.br/Api/v3/oauth/token"
 _TOKEN_FILE   = Path(__file__).parent.parent / "bling_tokens.json"

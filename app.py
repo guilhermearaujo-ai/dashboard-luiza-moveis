@@ -252,18 +252,8 @@ if not has_valid_tokens():
     Para exibir os dados reais de faturamento, autorize o acesso à sua conta Bling.<br>
     Você será redirecionado e voltará automaticamente.
   </p>
-  <a href="{get_auth_url()}" target="_blank"
-     style="display:inline-block;background:{NOXER_BLUE};color:#fff;
-            text-decoration:none;border-radius:10px;padding:13px 32px;
-            font-size:15px;font-weight:700;
-            box-shadow:0 4px 14px rgba(0,92,254,.32);
-            transition:background 0.3s ease;">
-    🔗 &nbsp;Autorizar Bling
-  </a>
-  <p style="font-size:11px;color:#9CA3AF;margin-top:20px">
-    URL de retorno configurada: <code>http://localhost:8501</code>
-  </p>
 </div>""", unsafe_allow_html=True)
+            st.link_button("🔗 Conectar ao Bling", url=get_auth_url())
 
     st.stop()
 
