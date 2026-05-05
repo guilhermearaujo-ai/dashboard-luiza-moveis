@@ -15,9 +15,10 @@ from typing import Optional
 from urllib.parse import urlencode
 
 import requests
+import streamlit as st
 from dotenv import load_dotenv
 
-_REDIRECT_URI = os.getenv("BLING_REDIRECT_URI", "http://localhost:8501")
+_REDIRECT_URI = st.secrets.get("BLING_REDIRECT_URI", os.getenv("BLING_REDIRECT_URI", "http://localhost:8501"))
 _AUTH_URL     = "https://www.bling.com.br/Api/v3/oauth/authorize"
 _TOKEN_URL    = "https://www.bling.com.br/Api/v3/oauth/token"
 _TOKEN_FILE   = Path(__file__).parent.parent / "bling_tokens.json"
@@ -31,8 +32,8 @@ def _load_env() -> tuple:
     """
     env_path = Path(__file__).parent.parent / ".env"
     load_dotenv(dotenv_path=env_path, override=False)
-    client_id     = os.getenv("BLING_CLIENT_ID", "").strip()
-    client_secret = os.getenv("BLING_CLIENT_SECRET", "").strip()
+    client_id     = st.secrets.get("BLING_CLIENT_ID", os.getenv("BLING_CLIENT_ID", "")).strip()
+    client_secret = st.secrets.get("BLING_CLIENT_SECRET", os.getenv("BLING_CLIENT_SECRET", "")).strip()
     print(f"[BlingAuth] CLIENT_ID carregado: {client_id[:6]}***" if client_id else "[BlingAuth] CLIENT_ID VAZIO!")
     return client_id, client_secret
 
@@ -43,7 +44,7 @@ def get_auth_url(state: str = "noxer_dashboard") -> str:
     """Gera a URL de autorização OAuth2 que o usuário deve abrir no browser."""
     client_id, _ = _load_env()
     if not client_id:
-        raise RuntimeError("BLING_CLIENT_ID não encontrado no .env")
+        raise RuntimeError("BLING_CLIENT_ID não encontrado (configure em st.secrets ou no .env)")
     params = urlencode({
         "response_type": "code",
         "client_id":     client_id,
@@ -176,7 +177,7 @@ def _basic_header() -> str:
     client_id, client_secret = _load_env()
     if not client_id or not client_secret:
         raise RuntimeError(
-            "BLING_CLIENT_ID ou BLING_CLIENT_SECRET não encontrados no .env. "
+            "BLING_CLIENT_ID ou BLING_CLIENT_SECRET não encontrados (configure em st.secrets ou no .env). "
             f"(client_id={'OK' if client_id else 'VAZIO'}, "
             f"client_secret={'OK' if client_secret else 'VAZIO'})"
         )
