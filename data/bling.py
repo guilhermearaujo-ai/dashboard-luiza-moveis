@@ -264,7 +264,7 @@ def _construir_itens(pedidos: list[dict], detalhes: dict, vendedores_map: dict) 
         else:
             loja_nome = str(loja_obj).strip() if loja_obj else ""
         if not loja_nome:
-            loja_nome = "Loja"
+            loja_nome = "Outros"
 
         if itens:
             items_sum = 0.0
@@ -388,6 +388,10 @@ def fetch_bling_orders(start_date: date, end_date: date) -> pd.DataFrame:
 
     df = pd.DataFrame(rows)
     df["date"] = pd.to_datetime(df["date"]).dt.normalize()
+
+    # Garante que colunas numéricas sejam float (defensive cast)
+    for _num_col in ("quantity", "unit_price", "total_price"):
+        df[_num_col] = pd.to_numeric(df[_num_col], errors="coerce").fillna(0.0)
 
     # Preenche vendedores vazios
     df["vendedor"] = df["vendedor"].replace("", "Venda Direta").fillna("Venda Direta")

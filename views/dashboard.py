@@ -31,9 +31,6 @@ def _build_sku_performance(df) -> "pd.DataFrame":
     """
     Cruza custo dos anúncios (Stract) com receita por SKU nos pedidos
     'WhatsApp - Meta Ads' (Bling).
-
-    - Custo: soma do spend por SKU extraído do ad_name (padrão ID_CAT_NOME_SKUs)
-    - Receita: soma do total_price por SKU nos pedidos da loja "WhatsApp - Meta Ads"
     """
     import pandas as pd
 
@@ -50,12 +47,14 @@ def _build_sku_performance(df) -> "pd.DataFrame":
         .agg(custo=("spend", "sum"))
     )
 
-    # Bling: receita por SKU nos pedidos de tráfego
+    result = meta_by_sku.copy()
+    result["receita"] = 0.0
+
     if "loja" in df.columns and "sku" in df.columns:
         df_trafico = df[
             (df["campaign_name"] == "Bling Direto") &
             (df["loja"] == "WhatsApp - Meta Ads") &
-            (df["sku"] != "")
+            (df["sku"].astype(str) != "")
         ][["sku", "total_price"]].copy()
 
         if not df_trafico.empty:
@@ -64,12 +63,6 @@ def _build_sku_performance(df) -> "pd.DataFrame":
                 .agg(receita=("total_price", "sum"))
             )
             result = pd.merge(meta_by_sku, bling_by_sku, on="sku", how="outer").fillna(0.0)
-        else:
-            result = meta_by_sku.copy()
-            result["receita"] = 0.0
-    else:
-        result = meta_by_sku.copy()
-        result["receita"] = 0.0
 
     result["roas"] = (
         result["receita"] / result["custo"].replace(0.0, float("nan"))
@@ -79,17 +72,11 @@ def _build_sku_performance(df) -> "pd.DataFrame":
 
 
 def show(df):
+    import pandas as pd
+
     st.markdown("## Visão Geral")
     st.caption("Performance consolidada de Tráfego Pago + Vendas (Bling)")
     st.markdown("")
-
-    # Proteção contra cache legado ou falha de merge
-    if "bling_revenue_day" not in df.columns:
-        df = df.copy()
-        df["bling_revenue_day"] = 0.0
-    if "bling_trafico_day" not in df.columns:
-        df = df.copy()
-        df["bling_trafico_day"] = 0.0
 
     # ── Seletor de Visão ──────────────────────────────────────────────────────
     view_mode = st.radio(
@@ -101,24 +88,32 @@ def show(df):
     )
     st.markdown("")
 
+    # ── Linhas Bling Direto (fonte principal de faturamento) ──────────────────
+    df_bling = df[df["campaign_name"] == "Bling Direto"].copy()
+
+    # DEBUG — remover após confirmar dados
+    st.write("**[DEBUG] Primeiras linhas Bling Direto:**", df_bling.head())
+    if "loja" in df_bling.columns:
+        st.write("**[DEBUG] Valores únicos de loja:**", df_bling["loja"].unique().tolist())
+
     # ── KPIs ──────────────────────────────────────────────────────────────────
     total_spend = float(df["spend"].sum())
     total_leads = float(df["leads"].sum())
     cpl         = total_spend / total_leads if total_leads else 0.0
 
     if view_mode == "Visão Global":
-        total_revenue = float(df.groupby("date")["bling_revenue_day"].max().sum())
-        total_units   = float(df["quantity"].sum())
+        # Soma TODA a receita Bling, independente de loja
+        total_revenue = float(df_bling["total_price"].sum()) if not df_bling.empty else 0.0
+        total_units   = float(df_bling["quantity"].sum())    if not df_bling.empty else 0.0
     else:
-        total_revenue = float(df.groupby("date")["bling_trafico_day"].max().sum())
-        if "loja" in df.columns:
-            _trafico_mask = (
-                (df["campaign_name"] == "Bling Direto") &
-                (df["loja"] == "WhatsApp - Meta Ads")
-            )
-            total_units = float(df[_trafico_mask]["quantity"].sum())
+        # Apenas pedidos da loja "WhatsApp - Meta Ads"
+        if not df_bling.empty and "loja" in df_bling.columns:
+            df_trafico = df_bling[df_bling["loja"] == "WhatsApp - Meta Ads"]
+            total_revenue = float(df_trafico["total_price"].sum())
+            total_units   = float(df_trafico["quantity"].sum())
         else:
-            total_units = 0.0
+            total_revenue = 0.0
+            total_units   = 0.0
 
     roas       = total_revenue / total_spend if total_spend  else 0.0
     avg_ticket = total_revenue / total_units if total_units  else 0.0
@@ -133,35 +128,39 @@ def show(df):
     st.markdown("---")
 
     # ── Gráfico: Faturamento, Investimento, Leads e CPL Diário ───────────────
-    revenue_col = (
-        "bling_trafico_day"
-        if view_mode == "Visão Tráfego (Meta Ads)" and "bling_trafico_day" in df.columns
-        else "bling_revenue_day"
+    df_meta_rows = df[df["campaign_name"] != "Bling Direto"]
+
+    daily_meta = (
+        df_meta_rows.groupby("date")
+        .agg(spend=("spend", "sum"), leads=("leads", "sum"))
+        .reset_index()
     )
 
-    daily = (
-        df.groupby("date")
-        .agg(
-            spend=("spend",       "sum"),
-            leads=("leads",       "sum"),
-        )
-        .reset_index()
-        .sort_values("date")
-    )
-    # Agrega a coluna de receita correta separadamente para evitar erro de nome dinâmico
-    daily_rev = (
-        df.groupby("date")[revenue_col]
-        .max()
-        .reset_index()
-        .rename(columns={revenue_col: "revenue"})
-    )
-    daily = daily.merge(daily_rev, on="date", how="left")
+    if not df_bling.empty:
+        if view_mode == "Visão Global":
+            daily_rev = (
+                df_bling.groupby("date")["total_price"]
+                .sum().reset_index().rename(columns={"total_price": "revenue"})
+            )
+        else:
+            _df_t = df_bling[df_bling["loja"] == "WhatsApp - Meta Ads"] if "loja" in df_bling.columns else df_bling.iloc[0:0]
+            daily_rev = (
+                _df_t.groupby("date")["total_price"]
+                .sum().reset_index().rename(columns={"total_price": "revenue"})
+            )
+        daily = daily_meta.merge(daily_rev, on="date", how="left")
+    else:
+        daily = daily_meta.copy()
+        daily["revenue"] = 0.0
+
+    daily = daily.sort_values("date")
     daily["revenue"] = daily["revenue"].fillna(0.0)
-    daily["cpl"] = (daily["spend"] / daily["leads"].replace(0, float("nan"))).fillna(0.0)
+    daily["spend"]   = daily["spend"].fillna(0.0)
+    daily["leads"]   = daily["leads"].fillna(0.0)
+    daily["cpl"]     = (daily["spend"] / daily["leads"].replace(0, float("nan"))).fillna(0.0)
 
     fig = go.Figure()
 
-    # Faturamento — Y1
     fig.add_trace(go.Scatter(
         x=daily["date"], y=daily["revenue"],
         name="Faturamento",
@@ -173,7 +172,6 @@ def show(df):
         yaxis="y1",
     ))
 
-    # Investimento — Y1
     fig.add_trace(go.Scatter(
         x=daily["date"], y=daily["spend"],
         name="Investimento",
@@ -183,7 +181,6 @@ def show(df):
         yaxis="y1",
     ))
 
-    # Leads — Y2
     fig.add_trace(go.Scatter(
         x=daily["date"], y=daily["leads"],
         name="Leads",
@@ -194,7 +191,6 @@ def show(df):
         yaxis="y2",
     ))
 
-    # CPL — Y3 (escala independente, eixo oculto)
     fig.add_trace(go.Scatter(
         x=daily["date"], y=daily["cpl"],
         name="CPL",
@@ -216,21 +212,18 @@ def show(df):
                         font=dict(size=12, color="#6B7280")),
             xaxis=dict(showgrid=False, zeroline=False,
                        tickfont=dict(size=10, color="#9CA3AF")),
-            # Y1 — Faturamento / Investimento (R$)
             yaxis=dict(
                 title="R$ (Faturamento / Investimento)",
                 showgrid=True, gridcolor=GRID_COLOR, zeroline=False,
                 tickfont=dict(size=10, color="#9CA3AF"),
                 tickprefix="R$ ", tickformat=",.0f",
             ),
-            # Y2 — Leads (inteiros, eixo direito visível)
             yaxis2=dict(
                 title="Leads",
                 overlaying="y", side="right",
                 showgrid=False, zeroline=False,
                 tickfont=dict(size=10, color=GREEN),
             ),
-            # Y3 — CPL (R$ pequeno, eixo oculto para não poluir)
             yaxis3=dict(
                 overlaying="y", side="right",
                 anchor="free", position=1.0,
@@ -266,8 +259,6 @@ def show(df):
 
     # ── Tabela Mestra de ROAS por Produto ─────────────────────────────────────
     st.markdown("#### Performance e ROAS por Produto (Meta Ads vs Bling)")
-
-    df_bling = df[df["campaign_name"] == "Bling Direto"]
 
     if df_bling.empty:
         st.info("Nenhum dado de produto encontrado. Verifique a conexão com o Bling.")
@@ -319,8 +310,7 @@ def show(df):
     st.markdown("#### Performance por SKU (Tráfego)")
     st.caption(
         "Custo do anúncio (Stract) × Receita dos SKUs nos pedidos "
-        "**WhatsApp - Meta Ads** (Bling)  ·  Padrão de taxonomia: "
-        "`ID_CATEGORIA_NOME_SKU1-SKU2`"
+        "**WhatsApp - Meta Ads** (Bling)  ·  Padrão: `ID_CATEGORIA_NOME_SKU1-SKU2`"
     )
 
     df_sku = _build_sku_performance(df)
