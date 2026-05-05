@@ -89,7 +89,12 @@ def exchange_code(code: str) -> dict:
 # ── Refresh automático ────────────────────────────────────────────────────────
 
 def _do_refresh(refresh_tok: str) -> dict:
-    """Usa o refresh_token para obter um novo access_token."""
+    """
+    Usa o refresh_token para obter um novo access_token.
+    Se a API retornar 'invalid_grant' (token revogado/expirado pelo Bling),
+    apaga o arquivo de tokens E limpa o cache do Streamlit para forçar
+    nova busca de dados após reconexão.
+    """
     print("[BlingAuth] Renovando access_token via refresh_token...")
     resp = requests.post(
         _TOKEN_URL,
@@ -104,12 +109,33 @@ def _do_refresh(refresh_tok: str) -> dict:
         },
         timeout=30,
     )
+
     if resp.status_code != 200:
+        # Detecta especificamente invalid_grant para log claro
+        try:
+            err_body = resp.json()
+        except Exception:
+            err_body = {}
+        err_code = err_body.get("error", "")
+        if err_code == "invalid_grant" or resp.status_code in (400, 401):
+            print(f"[BlingAuth] {err_code or 'auth_error'} detectado — apagando tokens e limpando cache.")
+            _clear_tokens()
+            try:
+                st.cache_data.clear()
+                print("[BlingAuth] Cache do Streamlit limpo.")
+            except Exception:
+                pass   # fora do contexto Streamlit (CLI/tests)
+            raise Exception(
+                f"Token Bling inválido ({err_code or resp.status_code}) — arquivo de tokens removido.\n"
+                "Clique em **Conectar ao Bling** para re-autorizar."
+            )
+        # Outros erros HTTP (5xx, etc.)
         _clear_tokens()
         raise Exception(
             f"Bling refresh falhou (HTTP {resp.status_code}):\n{resp.text}\n"
             "Tokens removidos — reconecte ao Bling."
         )
+
     tokens = resp.json()
     _save_tokens(tokens)
     print("[BlingAuth] Access_token renovado com sucesso.")

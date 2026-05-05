@@ -182,9 +182,13 @@ def _listar_pedidos(token: str, sd: str, ed: str) -> list[dict]:
 
         if resp.status_code == 401:
             invalidate_tokens()
+            try:
+                st.cache_data.clear()
+            except Exception:
+                pass
             raise Exception(
                 "Bling 401 — token expirado. "
-                "Clique em 'Desconectar Bling' na barra lateral e reconecte."
+                "Clique em 'Conectar ao Bling' para re-autorizar."
             )
 
         if resp.status_code != 200:
