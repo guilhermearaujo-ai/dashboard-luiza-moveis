@@ -381,7 +381,14 @@ def load_data() -> pd.DataFrame:
 
     Lança RuntimeError se o Meta Ads falhar (capturado em app.py).
     """
-    meta = load_meta_data()   # pode levantar RuntimeError
+    try:
+        meta = load_meta_data()
+    except Exception as exc:
+        raise RuntimeError(
+            "Falha ao carregar dados do Meta Ads (Google Sheets).\n\n"
+            f"Detalhe: {exc}\n\n"
+            "Verifique se a planilha está pública para leitura."
+        ) from exc
 
     date_min = meta["date"].min()
     date_max = meta["date"].max()

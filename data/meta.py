@@ -1,7 +1,6 @@
 """
 Carrega e limpa os dados reais do Meta Ads exportados via Stract → Google Sheets.
 """
-import streamlit as st
 import pandas as pd
 
 _SHEET_ID = "1UKL-A0eAq-Mtt2rtevojJkMtUbLKAC6QxMKyRpKn9zU"
@@ -24,13 +23,13 @@ _RENAME = {
 }
 
 
-@st.cache_data(ttl=3600, show_spinner="Carregando dados do Meta Ads...")
 def load_meta_data():
     """
     Baixa o CSV do Google Sheets, renomeia colunas, trata tipos e
     calcula CTR, CPC e CPM.
 
     Retorna um pd.DataFrame limpo ou levanta RuntimeError se falhar.
+    Sem @st.cache_data — o cache é gerido pelo load_data() em loader.py.
     """
     try:
         raw = pd.read_csv(CSV_URL)
