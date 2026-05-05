@@ -21,7 +21,6 @@ from typing import Optional
 
 import pandas as pd
 import requests
-import streamlit as st
 
 from data.bling_auth import get_valid_access_token, invalidate_tokens
 
@@ -176,7 +175,8 @@ def _listar_pedidos(token: str, sd: str, ed: str) -> list[dict]:
         if resp.status_code == 401:
             invalidate_tokens()
             try:
-                st.cache_data.clear()
+                import streamlit as _st
+                _st.cache_data.clear()
             except Exception:
                 pass
             raise Exception(
@@ -344,14 +344,12 @@ def fetch_bling_orders(start_date: date, end_date: date) -> pd.DataFrame:
     - Fallback de vendedor: 'Venda Direta'.
     """
     # ── Valida limite de 360 dias da API do Bling ────────────────────────────
-    from datetime import timedelta
     days_diff = (end_date - start_date).days
     if days_diff > 360:
-        st.error(
-            f"O período selecionado ({days_diff} dias) excede o limite de 360 dias da API do Bling. "
+        raise ValueError(
+            f"Período de {days_diff} dias excede o limite de 360 dias da API do Bling. "
             "Ajuste os filtros de data para um intervalo menor."
         )
-        return pd.DataFrame(columns=_COLUMNS)
 
     token = get_valid_access_token()
 
