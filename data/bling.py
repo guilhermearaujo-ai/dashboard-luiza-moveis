@@ -196,8 +196,13 @@ def _listar_pedidos(token: str, sd: str, ed: str) -> list[dict]:
             break
 
         for o in data:
-            # DEBUG: inclui TODOS os pedidos (sem filtro de situação)
-            # para verificar se a API retorna dados antes de qualquer filtragem
+            sit = o.get("situacao", {})
+            sit_nome = normalize(
+                sit.get("valor", "") if isinstance(sit, dict) else str(sit)
+            )
+            if sit_nome in _CANCELLED:
+                continue
+
             bling_id = o.get("id")
             if not bling_id:
                 continue
