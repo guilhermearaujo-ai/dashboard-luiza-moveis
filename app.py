@@ -319,6 +319,13 @@ with st.sidebar:
     st.markdown('<div class="sb-footer">v2.1.0 · Meta real · Bling mock</div>',
                 unsafe_allow_html=True)
 
+# ── DEBUG: IDs de loja vindos do Bling (visível na sidebar) ───────────────────
+_df_bling_dbg = df_full[df_full["campaign_name"] == "Bling Direto"]
+if not _df_bling_dbg.empty:
+    st.sidebar.markdown("---")
+    st.sidebar.caption("**DEBUG — Lojas detectadas no Bling:**")
+    st.sidebar.write(_df_bling_dbg["loja"].unique().tolist())
+
 # ── Dicionário de SKUs — não precisa de filtros nem do df ─────────────────────
 if page == "Dicionário de SKUs":
     sku_dictionary.show()

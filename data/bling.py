@@ -266,12 +266,23 @@ def _construir_itens(pedidos: list[dict], detalhes: dict, vendedores_map: dict) 
             vendedor    = _vendedor_nome(detalhe, vendedores_map) if detalhe else p.get("vendedor_lista", "Venda Direta")
             itens       = detalhe.get("itens") or []
 
-            # ── Extrai loja por busca textual bruta no detalhe completo ────────
+            # ── Extrai loja: texto bruto primeiro, ID numérico como fallback ───
             _detalhe_str = str(detalhe).lower()
             if "whatsapp" in _detalhe_str or "meta ads" in _detalhe_str:
                 loja_nome = "WhatsApp - Meta Ads"
             else:
-                loja_nome = "Outros"
+                # Guarda representação bruta para diagnóstico na sidebar
+                _loja_raw = detalhe.get("loja") or {}
+                if isinstance(_loja_raw, dict):
+                    # ex: "loja_id:204567" — visível na sidebar de debug
+                    _lid = _loja_raw.get("id") or _loja_raw.get("idLoja") or ""
+                    loja_nome = f"loja_id:{_lid}" if _lid else "Outros"
+                elif isinstance(_loja_raw, (int, float)):
+                    loja_nome = f"loja_id:{int(_loja_raw)}"
+                elif isinstance(_loja_raw, str) and _loja_raw.strip():
+                    loja_nome = _loja_raw.strip()
+                else:
+                    loja_nome = "Outros"
 
             # ── Itens do pedido ──────────────────────────────────────────────
             if itens:
