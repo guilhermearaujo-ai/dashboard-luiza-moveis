@@ -266,6 +266,14 @@ def _construir_itens(pedidos: list[dict], detalhes: dict, vendedores_map: dict) 
             vendedor    = _vendedor_nome(detalhe, vendedores_map) if detalhe else p.get("vendedor_lista", "Venda Direta")
             itens       = detalhe.get("itens") or []
 
+            # DEBUG TEMPORÁRIO: dump completo do pedido 13995
+            if str(p.get("numero")) == "13995":
+                print("--- RESUMO PEDIDO 13995 (listagem) ---")
+                print(json.dumps(p, indent=2, default=str))
+                print("--- DETALHE PEDIDO 13995 (API) ---")
+                print(json.dumps(detalhe, indent=2, default=str))
+                print("-----------------------------------")
+
             # ── Extrai nome da loja — 3 tentativas ──────────────────────────
             loja_nome = ""
 
