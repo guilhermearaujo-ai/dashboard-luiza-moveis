@@ -252,7 +252,7 @@ if not has_valid_tokens():
     Para exibir os dados reais de faturamento, autorize o acesso à sua conta Bling.<br>
     Você será redirecionado e voltará automaticamente.
   </p>
-  <a href="{get_auth_url()}" target="_self"
+  <a href="{get_auth_url()}" target="_blank"
      style="display:inline-block;background:{NOXER_BLUE};color:#fff;
             text-decoration:none;border-radius:10px;padding:13px 32px;
             font-size:15px;font-weight:700;
