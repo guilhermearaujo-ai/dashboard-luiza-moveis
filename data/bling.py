@@ -30,7 +30,7 @@ _CANCELLED  = {"cancelado", "cancelada", "cancelados", "cancelamento"}
 _CACHE_FILE = "data/bling_cache.json"
 
 _COLUMNS = ["date", "order_id", "product_name",
-            "quantity", "unit_price", "total_price", "vendedor", "_bling_key"]
+            "quantity", "unit_price", "total_price", "vendedor", "loja", "sku", "_bling_key"]
 
 
 # ── Helpers ────────────────────────────────────────────────────────────────────
@@ -257,6 +257,15 @@ def _construir_itens(pedidos: list[dict], detalhes: dict, vendedores_map: dict) 
         vendedor    = _vendedor_nome(detalhe, vendedores_map) if detalhe else p["vendedor_lista"]
         itens       = detalhe.get("itens") or []
 
+        # Extrai loja/canal do pedido (ex: "WhatsApp - Meta Ads")
+        loja_obj  = detalhe.get("loja") if detalhe else {}
+        if isinstance(loja_obj, dict):
+            loja_nome = (loja_obj.get("descricao") or "").strip()
+        else:
+            loja_nome = str(loja_obj).strip() if loja_obj else ""
+        if not loja_nome:
+            loja_nome = "Loja"
+
         if itens:
             items_sum = 0.0
             for item in itens:
@@ -265,6 +274,7 @@ def _construir_itens(pedidos: list[dict], detalhes: dict, vendedores_map: dict) 
                 unit_price = _to_float(item.get("valor", 0))
                 line_total = round(qty * unit_price, 2)
                 items_sum += line_total
+                sku        = (item.get("codigo") or "").strip()
 
                 rows.append({
                     "date":         order_date,
@@ -274,6 +284,8 @@ def _construir_itens(pedidos: list[dict], detalhes: dict, vendedores_map: dict) 
                     "unit_price":   unit_price,
                     "total_price":  line_total,
                     "vendedor":     vendedor,
+                    "loja":         loja_nome,
+                    "sku":          sku,
                     "_bling_key":   normalize(descricao),
                 })
 
@@ -288,6 +300,8 @@ def _construir_itens(pedidos: list[dict], detalhes: dict, vendedores_map: dict) 
                     "unit_price":   diff,
                     "total_price":  diff,
                     "vendedor":     vendedor,
+                    "loja":         loja_nome,
+                    "sku":          "",
                     "_bling_key":   "desconto frete ajuste",
                 })
         else:
@@ -300,6 +314,8 @@ def _construir_itens(pedidos: list[dict], detalhes: dict, vendedores_map: dict) 
                 "unit_price":   order_total,
                 "total_price":  order_total,
                 "vendedor":     vendedor,
+                "loja":         loja_nome,
+                "sku":          "",
                 "_bling_key":   "outros nao identificado",
             })
 

@@ -88,3 +88,18 @@ def load_meta_data():
     ).where(df["impressions"] > 0, 0.0).round(2)
 
     return df
+
+
+def extract_skus_from_ad_name(ad_name: str) -> list:
+    """
+    Extrai lista de SKUs do nome do anúncio seguindo a taxonomia:
+    ID_CATEGORIA_NOME_[SKUs]  →  ex: AD001_mesa_ametista_173319-173320
+
+    Retorna lista de strings numéricas (ex: ['173319', '173320'])
+    ou [] se o padrão não for identificado.
+    """
+    parts = str(ad_name).strip().split("_")
+    if len(parts) < 2:
+        return []
+    sku_part = parts[-1]
+    return [s.strip() for s in sku_part.split("-") if s.strip().isdigit()]

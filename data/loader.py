@@ -197,13 +197,16 @@ def _merge(meta: pd.DataFrame, bling: pd.DataFrame) -> pd.DataFrame:
         df["quantity"]          = 0
         df["unit_price"]        = 0.0
         df["total_price"]       = 0.0
-        df["bling_revenue_day"] = 0.0
-        df["vendedor"]          = ""
-        df["product_name"]      = df["ad_name"]
-        df["order_id"]          = ""
-        df["matched"]           = False
-        df["order_date"]        = df["date"]
-        df["order_status"]      = "—"
+        df["bling_revenue_day"]  = 0.0
+        df["bling_trafico_day"]  = 0.0
+        df["vendedor"]           = ""
+        df["product_name"]       = df["ad_name"]
+        df["order_id"]           = ""
+        df["matched"]            = False
+        df["order_date"]         = df["date"]
+        df["order_status"]       = "—"
+        df["loja"]               = ""
+        df["sku"]                = ""
         df["roas"] = 0.0
         df["cpl"]  = (df["spend"] / df["leads"]).where(df["leads"] > 0, 0.0).round(2)
         return df.drop(columns=["_meta_key"], errors="ignore").reset_index(drop=True)
@@ -257,6 +260,25 @@ def _merge(meta: pd.DataFrame, bling: pd.DataFrame) -> pd.DataFrame:
     df = df.merge(bling_daily, on="date", how="left")
     df["bling_revenue_day"] = df["bling_revenue_day"].fillna(0.0)
 
+    # ── Faturamento diário apenas dos pedidos "WhatsApp - Meta Ads" ───────
+    if "loja" in bling.columns:
+        bling_trafico_daily = (
+            bling[bling["loja"] == "WhatsApp - Meta Ads"]
+            .groupby("date", as_index=False)
+            .agg(bling_trafico_day=("total_price", "sum"))
+        )
+        df = df.merge(bling_trafico_daily, on="date", how="left")
+    if "bling_trafico_day" not in df.columns:
+        df["bling_trafico_day"] = 0.0
+    else:
+        df["bling_trafico_day"] = df["bling_trafico_day"].fillna(0.0)
+
+    # ── Garante colunas loja e sku nas linhas Meta (vazio — vêm do Bling Direto) ─
+    if "loja" not in df.columns:
+        df["loja"] = ""
+    if "sku" not in df.columns:
+        df["sku"] = ""
+
     df["quantity"]    = df["quantity"].fillna(0).astype(int)
     df["total_price"] = df["total_price"].fillna(0.0)
     df["unit_price"]  = df["unit_price"].fillna(0.0)
@@ -282,10 +304,12 @@ def _merge(meta: pd.DataFrame, bling: pd.DataFrame) -> pd.DataFrame:
     # Uma linha por item de pedido Bling, independente de match com Meta.
     # Alimenta as abas Produtos e Comercial sem depender do fuzzy match.
     # bling_revenue_day = 0 para não re-contar no KPI de Visão Geral.
-    bling_direct = bling[
-        ["date", "order_id", "product_name", "quantity",
-         "unit_price", "total_price", "vendedor"]
-    ].copy()
+    _bd_cols = ["date", "order_id", "product_name", "quantity",
+                "unit_price", "total_price", "vendedor"]
+    for _c in ("loja", "sku"):
+        if _c in bling.columns:
+            _bd_cols.append(_c)
+    bling_direct = bling[_bd_cols].copy()
 
     # Fallback: produto sem nome vira "Outros / Não Identificado"
     bling_direct["product_name"] = (
@@ -377,12 +401,15 @@ def load_data() -> pd.DataFrame:
 
     # ── Proteção de schema: garante que todas as colunas esperadas existam ──
     _required = {
-        "bling_revenue_day": 0.0,
-        "total_price":       0.0,
-        "quantity":          0,
-        "unit_price":        0.0,
-        "vendedor":          "",
-        "matched":           False,
+        "bling_revenue_day":  0.0,
+        "bling_trafico_day":  0.0,
+        "total_price":        0.0,
+        "quantity":           0,
+        "unit_price":         0.0,
+        "vendedor":           "",
+        "loja":               "",
+        "sku":                "",
+        "matched":            False,
     }
     for col, default in _required.items():
         if col not in df.columns:
