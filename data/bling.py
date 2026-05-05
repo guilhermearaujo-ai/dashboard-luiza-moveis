@@ -21,6 +21,7 @@ from typing import Optional
 
 import pandas as pd
 import requests
+import streamlit as st
 
 from data.bling_auth import get_valid_access_token, invalidate_tokens
 
@@ -168,10 +169,12 @@ def _listar_pedidos(token: str, sd: str, ed: str) -> list[dict]:
             timeout=30,
         )
 
-        # ── DEBUG TEMPORÁRIO: loga status e body da primeira página ──────────
+        # ── DEBUG: exibe status e resumo da resposta na sidebar ─────────────
         if page == 1:
             print(f"[Bling-DEBUG] Página 1 — HTTP {resp.status_code}")
             print(f"[Bling-DEBUG] Resposta (500 chars): {resp.text[:500]}")
+            st.sidebar.write(f"**Status API Bling:** `{resp.status_code}`")
+            st.sidebar.write(f"**Body (200 chars):** `{resp.text[:200]}`")
 
         if resp.status_code in (204, 404):
             print(f"[Bling] Página {page}: HTTP {resp.status_code} — sem mais dados.")
@@ -194,18 +197,14 @@ def _listar_pedidos(token: str, sd: str, ed: str) -> list[dict]:
         if page == 1:
             print(f"[Bling-DEBUG] Chaves do payload: {list(payload.keys())} | "
                   f"Itens na página 1: {len(data)}")
+            st.sidebar.write(f"**Pedidos página 1:** `{len(data)}`")
         if not data:
             print(f"[Bling] Página {page}: lista vazia — fim da paginação.")
             break
 
         for o in data:
-            sit = o.get("situacao", {})
-            sit_nome = normalize(
-                sit.get("valor", "") if isinstance(sit, dict) else str(sit)
-            )
-            if sit_nome in _CANCELLED:
-                continue
-
+            # DEBUG: inclui TODOS os pedidos (sem filtro de situação)
+            # para verificar se a API retorna dados antes de qualquer filtragem
             bling_id = o.get("id")
             if not bling_id:
                 continue
@@ -348,9 +347,10 @@ def fetch_bling_orders(start_date: date, end_date: date) -> pd.DataFrame:
     """
     token = get_valid_access_token()
 
-    sd = "2026-01-01"
+    sd = "2024-01-01"   # DEBUG: forçado para range amplo (era 2026-01-01)
     ed = end_date.strftime("%Y-%m-%d")
     print(f"[Bling] Período: {sd} → {ed}")
+    st.sidebar.write(f"**Período Bling:** `{sd}` → `{ed}`")
 
     # ── Pré-carga de vendedores (1 chamada, mapa {id: nome}) ─────────────────
     vendedores_map = _fetch_vendedores(token)
