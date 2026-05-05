@@ -93,27 +93,22 @@ def show(df):
     st.sidebar.subheader("DEBUG: Lojas no Bling")
     st.sidebar.write(df_bling["loja"].unique().tolist())
 
-    # DEBUG: JSON bruto do pedido 13995 para mapear campo 'loja' correto
-    import json as _json, os as _os
-    _cache_path = "data/bling_cache.json"
-    if _os.path.exists(_cache_path):
-        try:
-            with open(_cache_path) as _f:
-                _raw_cache = _json.load(_f)
-            _order_debug = None
-            for _oid, _det in _raw_cache.items():
-                if str(_det.get("numero", "")) == "13995":
-                    _order_debug = {"_cache_key": _oid, **_det}
-                    break
-            if _order_debug:
-                st.sidebar.subheader("DEBUG: Pedido 13995 (JSON bruto)")
-                st.sidebar.json(_order_debug)
-            else:
-                st.sidebar.warning("Pedido 13995 não encontrado no cache — filtre o período que o inclua.")
-        except Exception as _e:
-            st.sidebar.error(f"Erro ao ler cache Bling: {_e}")
-    else:
-        st.sidebar.warning("Cache Bling não encontrado (data/bling_cache.json).")
+    # DEBUG: Botão para limpar cache Streamlit
+    st.sidebar.markdown("---")
+    if st.sidebar.button("🗑️ Limpar Cache de Dados"):
+        st.cache_data.clear()
+        st.sidebar.success("Cache limpo! Recarregando...")
+        st.rerun()
+
+    # DEBUG: Busca direta do pedido 13995 na API (ignora cache de disco)
+    st.sidebar.markdown("---")
+    if st.sidebar.button("🔍 Buscar pedido 13995 na API"):
+        from data.bling import get_venda_especifica
+        with st.sidebar:
+            with st.spinner("Consultando Bling..."):
+                _raw = get_venda_especifica("13995")
+            st.subheader("DEBUG: Pedido 13995 (JSON bruto)")
+            st.json(_raw)
 
     if df_bling.empty:
         st.info(

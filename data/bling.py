@@ -443,3 +443,52 @@ def fetch_bling_orders(start_date: date, end_date: date) -> pd.DataFrame:
     print(f"[Bling] Vendedores encontrados: {sorted(df['vendedor'].unique().tolist())}")
 
     return df
+
+
+# ── Diagnóstico: busca direta por número de pedido ────────────────────────────
+
+def get_venda_especifica(numero_pedido: str = "13995") -> dict:
+    """
+    Busca o pedido pelo número via GET /pedidos/vendas?numero=<n>.
+    Retorna o JSON bruto do primeiro resultado (listagem + detalhe completo)
+    para diagnóstico do mapeamento de campos da API v3.
+    """
+    try:
+        token = get_valid_access_token()
+    except Exception as exc:
+        return {"erro": f"Token inválido: {exc}"}
+
+    # Etapa 1: achar o ID pelo número
+    try:
+        resp = requests.get(
+            _BASE_URL,
+            headers=_headers(token),
+            params={"numero": numero_pedido, "limite": 5},
+            timeout=15,
+        )
+        print(f"[Debug] /pedidos/vendas?numero={numero_pedido} → HTTP {resp.status_code}")
+        if resp.status_code != 200:
+            return {"erro": f"HTTP {resp.status_code}", "body": resp.text[:400]}
+        lista = resp.json().get("data", [])
+        if not lista:
+            return {"erro": f"Pedido {numero_pedido} não encontrado na listagem."}
+    except Exception as exc:
+        return {"erro": f"Erro na listagem: {exc}"}
+
+    resumo = lista[0]
+    bling_id = resumo.get("id")
+
+    # Etapa 2: detalhe completo
+    try:
+        resp2 = requests.get(
+            f"{_BASE_URL}/{bling_id}",
+            headers=_headers(token),
+            timeout=15,
+        )
+        print(f"[Debug] /pedidos/vendas/{bling_id} → HTTP {resp2.status_code}")
+        if resp2.status_code == 200:
+            detalhe = resp2.json().get("data", {})
+            return {"_lista_resumo": resumo, "_detalhe_completo": detalhe}
+        return {"_lista_resumo": resumo, "erro_detalhe": f"HTTP {resp2.status_code}"}
+    except Exception as exc:
+        return {"_lista_resumo": resumo, "erro_detalhe": str(exc)}
