@@ -89,10 +89,9 @@ def show(df):
     # ── Linhas Bling Direto (fonte de faturamento) ────────────────────────────
     df_bling = df[df["campaign_name"] == "Bling Direto"].copy()
 
-    # DEBUG temporário — mostra nomes reais de loja vindos do Bling
-    if not df_bling.empty and "loja" in df_bling.columns:
-        st.sidebar.write("**Lojas encontradas no Bling:**",
-                         df_bling["loja"].unique().tolist())
+    # DEBUG PERMANENTE — lista de lojas únicas vindas do Bling
+    st.sidebar.subheader("DEBUG: Lojas no Bling")
+    st.sidebar.write(df_bling["loja"].unique().tolist())
 
     if df_bling.empty:
         st.info(
