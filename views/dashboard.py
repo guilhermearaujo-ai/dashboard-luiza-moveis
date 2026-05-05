@@ -72,8 +72,6 @@ def _build_sku_performance(df) -> "pd.DataFrame":
 
 
 def show(df):
-    import pandas as pd
-
     st.markdown("## Visão Geral")
     st.caption("Performance consolidada de Tráfego Pago + Vendas (Bling)")
     st.markdown("")
@@ -88,13 +86,14 @@ def show(df):
     )
     st.markdown("")
 
-    # ── Linhas Bling Direto (fonte principal de faturamento) ──────────────────
+    # ── Linhas Bling Direto (fonte de faturamento) ────────────────────────────
     df_bling = df[df["campaign_name"] == "Bling Direto"].copy()
 
-    # DEBUG — remover após confirmar dados
-    st.write("**[DEBUG] Primeiras linhas Bling Direto:**", df_bling.head())
-    if "loja" in df_bling.columns:
-        st.write("**[DEBUG] Valores únicos de loja:**", df_bling["loja"].unique().tolist())
+    if df_bling.empty:
+        st.info(
+            "Sem dados de faturamento do Bling no período selecionado.  \n"
+            "Verifique a conexão ou aguarde o carregamento dos pedidos."
+        )
 
     # ── KPIs ──────────────────────────────────────────────────────────────────
     total_spend = float(df["spend"].sum())
@@ -102,11 +101,9 @@ def show(df):
     cpl         = total_spend / total_leads if total_leads else 0.0
 
     if view_mode == "Visão Global":
-        # Soma TODA a receita Bling, independente de loja
         total_revenue = float(df_bling["total_price"].sum()) if not df_bling.empty else 0.0
         total_units   = float(df_bling["quantity"].sum())    if not df_bling.empty else 0.0
     else:
-        # Apenas pedidos da loja "WhatsApp - Meta Ads"
         if not df_bling.empty and "loja" in df_bling.columns:
             df_trafico = df_bling[df_bling["loja"] == "WhatsApp - Meta Ads"]
             total_revenue = float(df_trafico["total_price"].sum())
@@ -143,7 +140,11 @@ def show(df):
                 .sum().reset_index().rename(columns={"total_price": "revenue"})
             )
         else:
-            _df_t = df_bling[df_bling["loja"] == "WhatsApp - Meta Ads"] if "loja" in df_bling.columns else df_bling.iloc[0:0]
+            _df_t = (
+                df_bling[df_bling["loja"] == "WhatsApp - Meta Ads"]
+                if "loja" in df_bling.columns
+                else df_bling.iloc[0:0]
+            )
             daily_rev = (
                 _df_t.groupby("date")["total_price"]
                 .sum().reset_index().rename(columns={"total_price": "revenue"})

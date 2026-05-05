@@ -390,11 +390,21 @@ def load_data() -> pd.DataFrame:
 
     try:
         bling = fetch_bling_orders(date_min, date_max)
+        if bling.empty:
+            st.warning(
+                "⚠️ **Bling retornou 0 pedidos** no período — Faturamento será R$ 0.  \n"
+                "Verifique se há pedidos no Bling para o período coberto pelo Meta Ads "
+                f"(`{date_min}` → `{date_max}`).  \n"
+                "Se o token expirou, clique em **Desconectar Bling** e reconecte."
+            )
     except Exception as exc:
         msg = str(exc)
         print(f"[Loader] ERRO ao buscar Bling: {msg}")
-        # Aviso não-bloqueante: o dashboard continua funcionando com faturamento R$0
-        print(f"[Loader] AVISO: Bling indisponível — exibindo apenas dados do Meta Ads. Detalhe: {msg[:200]}")
+        st.warning(
+            f"⚠️ **Erro ao conectar ao Bling** — Faturamento será R$ 0.  \n"
+            f"`{msg[:400]}`  \n"
+            "Se o token expirou, clique em **Desconectar Bling** na barra lateral e reconecte."
+        )
         bling = pd.DataFrame()
 
     df = _merge(meta, bling)

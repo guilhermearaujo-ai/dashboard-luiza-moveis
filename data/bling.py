@@ -168,6 +168,11 @@ def _listar_pedidos(token: str, sd: str, ed: str) -> list[dict]:
             timeout=30,
         )
 
+        # ── DEBUG TEMPORÁRIO: loga status e body da primeira página ──────────
+        if page == 1:
+            print(f"[Bling-DEBUG] Página 1 — HTTP {resp.status_code}")
+            print(f"[Bling-DEBUG] Resposta (500 chars): {resp.text[:500]}")
+
         if resp.status_code in (204, 404):
             print(f"[Bling] Página {page}: HTTP {resp.status_code} — sem mais dados.")
             break
@@ -176,7 +181,7 @@ def _listar_pedidos(token: str, sd: str, ed: str) -> list[dict]:
             invalidate_tokens()
             raise Exception(
                 "Bling 401 — token expirado. "
-                "Clique em 'Conectar ao Bling' para re-autorizar."
+                "Clique em 'Desconectar Bling' na barra lateral e reconecte."
             )
 
         if resp.status_code != 200:
@@ -184,7 +189,11 @@ def _listar_pedidos(token: str, sd: str, ed: str) -> list[dict]:
                 f"Bling HTTP {resp.status_code} na listagem.\nCorpo: {resp.text[:400]}"
             )
 
-        data = resp.json().get("data", [])
+        payload = resp.json()
+        data = payload.get("data", [])
+        if page == 1:
+            print(f"[Bling-DEBUG] Chaves do payload: {list(payload.keys())} | "
+                  f"Itens na página 1: {len(data)}")
         if not data:
             print(f"[Bling] Página {page}: lista vazia — fim da paginação.")
             break
@@ -247,18 +256,20 @@ def _construir_itens(pedidos: list[dict], detalhes: dict, vendedores_map: dict) 
     rows = []
 
     for p in pedidos:
-        order_date = _parse_date(p["data"])
+        # ── data do pedido — se falhar, pula mas não derruba o loop ─────────
+        order_date = _parse_date(p.get("data"))
         if order_date is None:
+            print(f"[Bling] Pedido {p.get('numero','?')}: data inválida '{p.get('data')}' — ignorado.")
             continue
 
-        order_num   = p["numero"]
-        order_total = p["total"]
-        detalhe     = detalhes.get(p["id"], {})
-        vendedor    = _vendedor_nome(detalhe, vendedores_map) if detalhe else p["vendedor_lista"]
+        order_num   = p.get("numero", str(p.get("id", "?")))
+        order_total = _to_float(p.get("total", 0))
+        detalhe     = detalhes.get(p.get("id"), {}) or {}
+        vendedor    = _vendedor_nome(detalhe, vendedores_map) if detalhe else p.get("vendedor_lista", "Venda Direta")
         itens       = detalhe.get("itens") or []
 
         # Extrai loja/canal do pedido (ex: "WhatsApp - Meta Ads")
-        loja_obj  = detalhe.get("loja") if detalhe else {}
+        loja_obj = detalhe.get("loja") or {}
         if isinstance(loja_obj, dict):
             loja_nome = (loja_obj.get("descricao") or "").strip()
         else:
