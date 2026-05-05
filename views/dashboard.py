@@ -53,7 +53,7 @@ def _build_sku_performance(df) -> "pd.DataFrame":
     if "loja" in df.columns and "sku" in df.columns:
         df_trafico = df[
             (df["campaign_name"] == "Bling Direto") &
-            (df["loja"] == "WhatsApp - Meta Ads") &
+            (df["loja"].str.contains("whatsapp|meta", case=False, na=False)) &
             (df["sku"].astype(str) != "")
         ][["sku", "total_price"]].copy()
 
@@ -89,6 +89,11 @@ def show(df):
     # ── Linhas Bling Direto (fonte de faturamento) ────────────────────────────
     df_bling = df[df["campaign_name"] == "Bling Direto"].copy()
 
+    # DEBUG temporário — mostra nomes reais de loja vindos do Bling
+    if not df_bling.empty and "loja" in df_bling.columns:
+        st.sidebar.write("**Lojas encontradas no Bling:**",
+                         df_bling["loja"].unique().tolist())
+
     if df_bling.empty:
         st.info(
             "Sem dados de faturamento do Bling no período selecionado.  \n"
@@ -105,7 +110,7 @@ def show(df):
         total_units   = float(df_bling["quantity"].sum())    if not df_bling.empty else 0.0
     else:
         if not df_bling.empty and "loja" in df_bling.columns:
-            df_trafico = df_bling[df_bling["loja"] == "WhatsApp - Meta Ads"]
+            df_trafico = df_bling[df_bling["loja"].str.contains("whatsapp|meta", case=False, na=False)]
             total_revenue = float(df_trafico["total_price"].sum())
             total_units   = float(df_trafico["quantity"].sum())
         else:
@@ -141,7 +146,7 @@ def show(df):
             )
         else:
             _df_t = (
-                df_bling[df_bling["loja"] == "WhatsApp - Meta Ads"]
+                df_bling[df_bling["loja"].str.contains("whatsapp|meta", case=False, na=False)]
                 if "loja" in df_bling.columns
                 else df_bling.iloc[0:0]
             )
