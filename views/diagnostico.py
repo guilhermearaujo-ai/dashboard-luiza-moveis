@@ -7,10 +7,10 @@ import os
 
 import streamlit as st
 
-from data.bling import get_venda_especifica, _LOJAS_CACHE, _TRAFICO_LOJA_IDS
-
 
 def show():
+    # Import lazy — evita crash se data.bling_auth falhar no import global
+    from data.bling import get_venda_especifica, _LOJAS_CACHE, _TRAFICO_LOJA_IDS
     st.markdown("## Diagnóstico do Bling")
     st.caption(
         "Use esta aba para inspecionar o JSON bruto retornado pela API v3 "
