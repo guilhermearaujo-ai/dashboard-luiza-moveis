@@ -237,30 +237,26 @@ if not has_valid_tokens():
     elif _flash and _flash.startswith("error:"):
         st.error(f"Erro ao conectar ao Bling: {_flash[6:]}")
 
-    _bling_url = get_auth_url()
-
     _, _col, _ = st.columns([1, 1.2, 1])
     with _col:
-        st.markdown(f"""
-<div style="background:#fff;border-radius:20px;padding:40px 36px;
-            box-shadow:0 10px 40px rgba(0,0,0,0.14);text-align:center;">
-  {_svg_img_tag("assets/logo1.svg", max_width="130px").replace('display:block','display:inline-block')}
-  <p style="font-size:20px;font-weight:800;color:#111827;margin:20px 0 6px">
-    Conectar ao Bling
-  </p>
-  <p style="font-size:13px;color:#6B7280;margin:0 0 28px;line-height:1.6">
-    Para exibir os dados reais de faturamento, autorize o acesso à sua conta Bling.<br>
-    Você será redirecionado e voltará automaticamente.
-  </p>
-  <a href="{_bling_url}" target="_self"
-     style="display:inline-block;width:100%;padding:14px 0;
-            background:{NOXER_BLUE};color:#fff;font-size:15px;font-weight:700;
-            border-radius:10px;text-decoration:none;
-            box-shadow:0 4px 14px rgba(0,92,254,.32);
-            transition:all 0.3s ease;">
-    Conectar ao Bling
-  </a>
-</div>""", unsafe_allow_html=True)
+        with st.form(key="bling_connect_form"):
+            st.markdown(
+                _svg_img_tag("assets/logo1.svg", max_width="130px"),
+                unsafe_allow_html=True,
+            )
+            st.markdown(
+                '<p style="font-size:20px;font-weight:800;color:#111827;margin:20px 0 6px;text-align:center">'
+                'Conectar ao Bling</p>'
+                '<p style="font-size:13px;color:#6B7280;margin:0 0 28px;line-height:1.6;text-align:center">'
+                'Para exibir os dados reais de faturamento, autorize o acesso à sua conta Bling.<br>'
+                'Você será redirecionado e voltará automaticamente.</p>',
+                unsafe_allow_html=True,
+            )
+            st.link_button(
+                "Conectar ao Bling",
+                url=get_auth_url(),
+                use_container_width=True,
+            )
 
     st.stop()
 
