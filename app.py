@@ -1,20 +1,19 @@
-import base64
-
-import pandas as pd
+# ── Page config — DEVE ser o primeiro comando Streamlit ───────────────────────
 import streamlit as st
-from streamlit_option_menu import option_menu
-
-from data.bling_auth import clear_tokens, exchange_code, get_auth_url, has_valid_tokens
-from data.loader import load_data
-from views import campanhas, comercial, dashboard, produtos, sku_dictionary
-
-# ── Page config (must be first Streamlit call) ─────────────────────────────────
 st.set_page_config(
     page_title="Noxer · Dashboard",
     page_icon="assets/simbolo1.svg",
     layout="wide",
     initial_sidebar_state="expanded",
 )
+
+import base64
+import pandas as pd
+from streamlit_option_menu import option_menu
+
+from data.bling_auth import clear_tokens, exchange_code, get_auth_url, has_valid_tokens
+from data.loader import load_data
+from views import campanhas, comercial, dashboard, produtos, sku_dictionary
 
 # ── Brand palette ──────────────────────────────────────────────────────────────
 NOXER_BLUE  = "#005CFE"
@@ -316,6 +315,8 @@ with st.sidebar:
         st.session_state.login_error = False
         st.rerun()
 
+    st.markdown("---")
+    st.info("V3 - Mapeamento Ativo")
     st.markdown('<div class="sb-footer">v2.1.0 · Meta real · Bling mock</div>',
                 unsafe_allow_html=True)
 

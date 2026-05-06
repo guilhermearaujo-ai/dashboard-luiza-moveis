@@ -278,7 +278,13 @@ def _construir_itens(pedidos: list[dict], detalhes: dict, vendedores_map: dict) 
             if l_id or "whatsapp" in l_desc or "meta" in l_desc:
                 loja_nome = "WhatsApp - Meta Ads"
             else:
-                loja_nome = "Outros"
+                # Fallback por vendedor: se loja vier nula mas o vendedor for
+                # reconhecido como responsável pelo tráfego pago, classifica.
+                _vend_lower = vendedor.lower()
+                if "kariny" in _vend_lower:
+                    loja_nome = "WhatsApp - Meta Ads"
+                else:
+                    loja_nome = "Outros"
 
             # ── Itens do pedido ──────────────────────────────────────────────
             if itens:
