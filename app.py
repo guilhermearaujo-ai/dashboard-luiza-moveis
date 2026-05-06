@@ -237,22 +237,44 @@ if not has_valid_tokens():
     elif _flash and _flash.startswith("error:"):
         st.error(f"Erro ao conectar ao Bling: {_flash[6:]}")
 
+    # Estiliza o link_button para parecer integrado ao card
+    st.markdown("""<style>
+    /* Card container para a tela de conexão Bling */
+    .bling-connect-card {
+        background: #fff; border-radius: 20px; padding: 40px 36px;
+        box-shadow: 0 10px 40px rgba(0,0,0,0.14); text-align: center;
+    }
+    /* Botão de conectar — estilizado como primário dentro do card */
+    .bling-connect-card + div .stLinkButton > a {
+        background: """ + NOXER_BLUE + """ !important;
+        color: white !important; border: none !important;
+        border-radius: 10px !important; font-size: 15px !important;
+        font-weight: 700 !important; padding: 12px !important;
+        width: 100% !important;
+        box-shadow: 0 4px 14px rgba(0,92,254,.32) !important;
+        transition: all 0.3s ease !important;
+        text-decoration: none !important;
+    }
+    .bling-connect-card + div .stLinkButton > a:hover {
+        background: """ + NOXER_DARK + """ !important;
+        transform: translateY(-1px) !important;
+        box-shadow: 0 6px 20px rgba(0,92,254,.42) !important;
+    }
+    </style>""", unsafe_allow_html=True)
+
     _, _col, _ = st.columns([1, 1.2, 1])
     with _col:
-        with st.container():
-            st.markdown(f"""
-<div style="background:#fff;border-radius:20px;padding:40px 36px;
-            box-shadow:0 10px 40px rgba(0,0,0,0.14);text-align:center;">
+        st.markdown(f"""<div class="bling-connect-card">
   {_svg_img_tag("assets/logo1.svg", max_width="130px").replace('display:block','display:inline-block')}
   <p style="font-size:20px;font-weight:800;color:#111827;margin:20px 0 6px">
     Conectar ao Bling
   </p>
-  <p style="font-size:13px;color:#6B7280;margin:0 0 28px;line-height:1.6">
+  <p style="font-size:13px;color:#6B7280;margin:0 0 10px;line-height:1.6">
     Para exibir os dados reais de faturamento, autorize o acesso à sua conta Bling.<br>
     Você será redirecionado e voltará automaticamente.
   </p>
 </div>""", unsafe_allow_html=True)
-            st.link_button("🔗 Conectar ao Bling", url=get_auth_url())
+        st.link_button("Conectar ao Bling", url=get_auth_url(), use_container_width=True)
 
     st.stop()
 
@@ -261,19 +283,7 @@ if not has_valid_tokens():
 # ══════════════════════════════════════════════════════════════════════════════
 _inject_dashboard_css()
 
-# Flash de conexão bem-sucedida (pode aparecer na primeira carga pós-OAuth)
-_flash = st.session_state.pop("bling_flash", None)
-if _flash == "success":
-    st.success("✅ Bling conectado com sucesso! Carregando dados reais...")
-
-# ── Data ───────────────────────────────────────────────────────────────────────
-try:
-    df_full = load_data()
-except RuntimeError as _err:
-    st.error("**Erro ao carregar dados do Meta Ads**\n\n{}".format(_err))
-    st.stop()
-
-# ── Sidebar ────────────────────────────────────────────────────────────────────
+# ── Sidebar — renderiza ANTES do load para evitar tela branca ──────────────────
 with st.sidebar:
     st.markdown(_svg_img_tag("assets/logo1.svg", max_width="140px"), unsafe_allow_html=True)
     st.markdown('<hr class="sb-div"/>', unsafe_allow_html=True)
@@ -319,6 +329,19 @@ with st.sidebar:
     st.info("V3 - Mapeamento Ativo")
     st.markdown('<div class="sb-footer">v2.2.0 · Meta real · Bling real</div>',
                 unsafe_allow_html=True)
+
+# ── Flash de conexão bem-sucedida ──────────────────────────────────────────────
+_flash = st.session_state.pop("bling_flash", None)
+if _flash == "success":
+    st.success("Bling conectado com sucesso!")
+
+# ── Data — com spinner para feedback visual ────────────────────────────────────
+try:
+    with st.spinner("Carregando dados do Bling e Meta Ads..."):
+        df_full = load_data()
+except RuntimeError as _err:
+    st.error("**Erro ao carregar dados do Meta Ads**\n\n{}".format(_err))
+    st.stop()
 
 # ── Páginas que não precisam de filtros nem do df ─────────────────────────────
 if page == "Dicionário de SKUs":
