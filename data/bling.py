@@ -41,6 +41,33 @@ _TRAFICO_KEYWORDS = {"whatsapp", "meta", "trafego", "tráfego"}
 
 # ── Helpers ────────────────────────────────────────────────────────────────────
 
+def _request_with_retry(method: str, url: str, headers: dict,
+                        params: dict = None, max_retries: int = 5,
+                        timeout: int = 15) -> requests.Response:
+    """
+    Faz request com retry automático para HTTP 429 (rate limit).
+    Espera o tempo indicado pelo header Retry-After, ou usa backoff exponencial.
+    """
+    for attempt in range(max_retries):
+        resp = requests.request(method, url, headers=headers,
+                                params=params, timeout=timeout)
+        if resp.status_code != 429:
+            return resp
+
+        # 429 — calcula tempo de espera
+        retry_after = resp.headers.get("Retry-After")
+        if retry_after:
+            wait = int(retry_after)
+        else:
+            wait = min(2 ** attempt, 30)   # 1s, 2s, 4s, 8s, 16s...
+
+        print(f"[Bling] 429 Rate Limit — aguardando {wait}s (tentativa {attempt+1}/{max_retries})")
+        time.sleep(wait)
+
+    # Retorna o último response (429) se esgotou retries
+    return resp
+
+
 def normalize(text: str) -> str:
     text = str(text).lower().strip()
     text = unicodedata.normalize("NFD", text)
@@ -110,7 +137,7 @@ def _fetch_lojas(token: str) -> dict:
         "https://www.bling.com.br/Api/v3/depositos",
     ]:
         try:
-            resp = requests.get(endpoint, headers=_headers(token), timeout=15)
+            resp = _request_with_retry("GET", endpoint, headers=_headers(token))
             if resp.status_code == 200:
                 data = resp.json().get("data", [])
                 for item in data:
@@ -139,10 +166,9 @@ def _fetch_vendedores(token: str) -> dict:
     vendedor.contato.nome dentro do endpoint /vendedores.
     """
     try:
-        resp = requests.get(
-            "https://www.bling.com.br/Api/v3/vendedores",
+        resp = _request_with_retry(
+            "GET", "https://www.bling.com.br/Api/v3/vendedores",
             headers=_headers(token),
-            timeout=15,
         )
         if resp.status_code != 200:
             print(f"[Bling] /vendedores HTTP {resp.status_code} — usando 'Venda Direta' como fallback.")
@@ -196,8 +222,8 @@ def _listar_pedidos(token: str, sd: str, ed: str) -> list[dict]:
     page    = 1
 
     while True:
-        resp = requests.get(
-            _BASE_URL,
+        resp = _request_with_retry(
+            "GET", _BASE_URL,
             headers=_headers(token),
             params=[
                 ("pagina",      page),
@@ -205,7 +231,6 @@ def _listar_pedidos(token: str, sd: str, ed: str) -> list[dict]:
                 ("dataInicial", sd),
                 ("dataFinal",   ed),
             ],
-            timeout=30,
         )
 
         if resp.status_code in (204, 404):
@@ -270,10 +295,9 @@ def _buscar_detalhe(bling_id: int, numero: str, token: str) -> dict:
     """
     print(f"  Lendo detalhes do pedido {numero} (id={bling_id})...")
     try:
-        resp = requests.get(
-            f"{_BASE_URL}/{bling_id}",
+        resp = _request_with_retry(
+            "GET", f"{_BASE_URL}/{bling_id}",
             headers=_headers(token),
-            timeout=15,
         )
         if resp.status_code == 200:
             return resp.json().get("data", {})
@@ -463,7 +487,7 @@ def fetch_bling_orders(start_date: date, end_date: date) -> pd.DataFrame:
 
         for i, p in enumerate(novos, 1):
             detalhes[p["id"]] = _buscar_detalhe(p["id"], p["numero"], token)
-            time.sleep(0.33)   # respeita limite de 3 req/s da API do Bling
+            time.sleep(0.5)    # respeita limite de 3 req/s da API do Bling (margem extra)
 
             if i % 50 == 0:
                 print(f"[Bling] Progresso: {i}/{total_novos} novos detalhes carregados...")
@@ -512,11 +536,10 @@ def get_venda_especifica(numero_pedido: str = "13995") -> dict:
 
     # Etapa 1: achar o ID pelo número
     try:
-        resp = requests.get(
-            _BASE_URL,
+        resp = _request_with_retry(
+            "GET", _BASE_URL,
             headers=_headers(token),
             params={"numero": numero_pedido, "limite": 5},
-            timeout=15,
         )
         print(f"[Debug] /pedidos/vendas?numero={numero_pedido} → HTTP {resp.status_code}")
         if resp.status_code != 200:
@@ -532,10 +555,9 @@ def get_venda_especifica(numero_pedido: str = "13995") -> dict:
 
     # Etapa 2: detalhe completo
     try:
-        resp2 = requests.get(
-            f"{_BASE_URL}/{bling_id}",
+        resp2 = _request_with_retry(
+            "GET", f"{_BASE_URL}/{bling_id}",
             headers=_headers(token),
-            timeout=15,
         )
         print(f"[Debug] /pedidos/vendas/{bling_id} → HTTP {resp2.status_code}")
         if resp2.status_code == 200:
