@@ -330,11 +330,10 @@ def _construir_itens(pedidos: list[dict], detalhes: dict, vendedores_map: dict) 
             vendedor    = _vendedor_nome(detalhe, vendedores_map) if detalhe else p.get("vendedor_lista", "Venda Direta")
             itens       = detalhe.get("itens") or []
 
-            # ── Extrai loja — mapeamento robusto ────────────────────────────
-            # Estratégia em 3 camadas:
-            #   1. ID da loja bate com _TRAFICO_LOJA_IDS (detectado via /depositos)
+            # ── Extrai loja — mapeamento por ID exato ─────────────────────
+            # Estratégia em 2 camadas (sem fallback por vendedor):
+            #   1. ID da loja bate com _TRAFICO_LOJA_IDS (206032703)
             #   2. Descrição da loja contém palavras-chave de tráfego
-            #   3. Fallback por vendedor (ex: Kariny = tráfego)
             loja_nome = "Outros"
             loja_raw = detalhe.get("loja")
 
@@ -364,12 +363,6 @@ def _construir_itens(pedidos: list[dict], detalhes: dict, vendedores_map: dict) 
                     loja_nome = l_desc.title()
                 elif l_id is not None and _LOJAS_CACHE.get(int(l_id)):
                     loja_nome = _LOJAS_CACHE[int(l_id)]
-
-            # Camada 3: fallback por vendedor
-            if loja_nome == "Outros":
-                _vend_lower = vendedor.lower()
-                if "kariny" in _vend_lower:
-                    loja_nome = "WhatsApp - Meta Ads"
 
             # ── Itens do pedido ──────────────────────────────────────────────
             if itens:
