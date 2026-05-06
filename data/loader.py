@@ -402,7 +402,15 @@ def load_data() -> pd.DataFrame:
     except Exception as exc:
         msg = str(exc)
         print(f"[Loader] ERRO ao buscar Bling: {msg}")
-        st.warning(f"⚠️ Bling indisponível — {msg[:200]}")
+        # Mensagem amigável — esconde detalhes técnicos do usuário
+        if "invalid_grant" in msg or "Token" in msg:
+            st.warning("Bling indisponível — sua sessão expirou. Clique em **Desconectar Bling** na sidebar e reconecte.")
+        elif "429" in msg or "TOO_MANY" in msg:
+            st.warning("Bling temporariamente sobrecarregado. Aguarde alguns minutos e recarregue a página.")
+        elif "timeout" in msg.lower() or "connect" in msg.lower():
+            st.warning("Não foi possível conectar ao Bling. Verifique sua conexão e tente novamente.")
+        else:
+            st.warning(f"Bling indisponível — tente recarregar a página em alguns minutos.")
         bling = pd.DataFrame()
 
     df = _merge(meta, bling)

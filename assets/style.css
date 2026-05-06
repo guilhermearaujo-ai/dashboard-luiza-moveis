@@ -1,5 +1,5 @@
 /* ════════════════════════════════════════════════════════════════════════════
-   Luiza Móveis Dashboard — Global Stylesheet
+   Noxer Dashboard — Global Stylesheet v2.3
    Stack: Streamlit + Tailwind-inspired design system
    ════════════════════════════════════════════════════════════════════════════ */
 
@@ -9,6 +9,11 @@
 /* ── Base ─────────────────────────────────────────────────────────────────── */
 html, body, [class*="css"] {
   font-family: 'Inter', 'Segoe UI', sans-serif !important;
+}
+
+/* Fundo suave — cria hierarquia visual com os cards brancos */
+[data-testid="stAppViewContainer"] > .main {
+  background: #F8FAFC !important;
 }
 
 /* Remove padding excessivo do container principal */
@@ -51,13 +56,13 @@ section[data-testid="stSidebar"] > div:first-child {
 /* ── KPI Metric Cards ─────────────────────────────────────────────────────── */
 [data-testid="metric-container"] {
   background:    #FFFFFF !important;
-  border-radius: 12px    !important;
-  padding:       1.5rem  !important;
+  border-radius: 14px    !important;
+  padding:       1.25rem 1.5rem !important;
   box-shadow:
-    0 1px 3px  rgba(0, 0, 0, 0.06),
-    0 4px 6px -1px rgba(0, 0, 0, 0.10) !important;
-  border: 1px solid #F1F5F9 !important;
-  transition: box-shadow 0.25s ease, transform 0.25s ease;
+    0 1px 3px  rgba(0, 0, 0, 0.04),
+    0 4px 12px rgba(0, 0, 0, 0.06) !important;
+  border: 1px solid #E5E7EB !important;
+  transition: box-shadow 0.3s ease, transform 0.3s ease;
 }
 
 [data-testid="metric-container"]:hover {
@@ -69,11 +74,11 @@ section[data-testid="stSidebar"] > div:first-child {
 
 /* Label da métrica — cinza suave, maiúsculas */
 [data-testid="stMetricLabel"] > div {
-  font-size:      11px    !important;
-  font-weight:    700     !important;
-  color:          #6B7280 !important;
+  font-size:      10.5px  !important;
+  font-weight:    600     !important;
+  color:          #9CA3AF !important;
   text-transform: uppercase;
-  letter-spacing: 0.55px;
+  letter-spacing: 0.6px;
   white-space:    nowrap  !important;
   overflow:       hidden;
   text-overflow:  ellipsis;
@@ -81,7 +86,7 @@ section[data-testid="stSidebar"] > div:first-child {
 
 /* Valor principal — negrito escuro */
 [data-testid="stMetricValue"] > div {
-  font-size:   1.65rem !important;
+  font-size:   1.6rem  !important;
   font-weight: 800     !important;
   color:       #111827 !important;
   white-space: nowrap  !important;
@@ -96,11 +101,12 @@ section[data-testid="stSidebar"] > div:first-child {
   background:    #FFFFFF !important;
   border-radius: 16px    !important;
   overflow:      hidden  !important;
+  padding:       8px     !important;
   box-shadow:
-    0 1px 3px  rgba(0, 0, 0, 0.06),
+    0 1px 3px  rgba(0, 0, 0, 0.04),
     0 4px 20px rgba(0, 0, 0, 0.05) !important;
-  border: 1px solid #F1F5F9 !important;
-  transition: box-shadow 0.25s ease;
+  border: 1px solid #E5E7EB !important;
+  transition: box-shadow 0.3s ease;
 }
 
 [data-testid="stPlotlyChart"]:hover {
@@ -111,24 +117,71 @@ section[data-testid="stSidebar"] > div:first-child {
 
 /* ── DataFrames ───────────────────────────────────────────────────────────── */
 [data-testid="stDataFrame"] {
-  border-radius: 12px !important;
+  border-radius: 14px !important;
   overflow:      hidden !important;
   box-shadow:
-    0 1px 3px  rgba(0, 0, 0, 0.06),
+    0 1px 3px  rgba(0, 0, 0, 0.04),
     0 4px 20px rgba(0, 0, 0, 0.05) !important;
-  border: 1px solid #F1F5F9 !important;
+  border: 1px solid #E5E7EB !important;
+}
+
+/* ── Headings — seção mais limpa ──────────────────────────────────────────── */
+h2 {
+  color: #111827 !important;
+  font-weight: 800 !important;
+  letter-spacing: -0.02em;
+}
+
+h4 {
+  color: #374151 !important;
+  font-weight: 700 !important;
+  margin-top: 1.5rem !important;
+}
+
+/* ── Dividers — mais sutis ────────────────────────────────────────────────── */
+hr {
+  border: none !important;
+  border-top: 1px solid #F1F5F9 !important;
+  margin: 1.5rem 0 !important;
+}
+
+/* ── Radio buttons — mais visuais ─────────────────────────────────────────── */
+[data-testid="stRadio"] > div {
+  gap: 0.5rem !important;
+}
+
+[data-testid="stRadio"] label {
+  background: #FFFFFF !important;
+  border: 1.5px solid #E5E7EB !important;
+  border-radius: 10px !important;
+  padding: 8px 18px !important;
+  font-size: 13px !important;
+  font-weight: 600 !important;
+  transition: all 0.2s ease !important;
+}
+
+[data-testid="stRadio"] label:hover {
+  border-color: #005CFE !important;
+  background: #EBF5FF !important;
+}
+
+[data-testid="stRadio"] label[data-checked="true"],
+[data-testid="stRadio"] label:has(input:checked) {
+  background: #005CFE !important;
+  color: #FFFFFF !important;
+  border-color: #005CFE !important;
 }
 
 /* ── Buttons ──────────────────────────────────────────────────────────────── */
 .stButton > button {
-  border-radius: 8px    !important;
+  border-radius: 10px   !important;
   font-weight:   600    !important;
   transition: all 0.25s ease !important;
 }
 
 .stButton > button:hover {
   transform:  translateY(-1px) !important;
-  box-shadow: 0 4px 16px rgba(0, 92, 254, 0.25) !important;
+  box-shadow: 0 4px 16px rgba(0, 92, 254, 0.20) !important;
 }
 
 /* ── Filter Bar (pill inputs) ─────────────────────────────────────────────── */
@@ -140,9 +193,9 @@ section[data-testid="stSidebar"] > div:first-child {
   border-radius: 14px;
   padding:       10px 16px 12px;
   box-shadow:
-    0 1px 3px  rgba(0, 0, 0, 0.05),
+    0 1px 3px  rgba(0, 0, 0, 0.04),
     0 4px 14px rgba(0, 0, 0, 0.04);
-  border:        1px solid #F1F5F9;
+  border:        1px solid #E5E7EB;
   margin-bottom: 18px;
   align-items:   flex-start;
 }
@@ -173,6 +226,17 @@ section[data-testid="stSidebar"] > div:first-child {
 
 [data-testid="stMultiSelect"] [data-baseweb="select"] > div:first-child:hover {
   border-color: #005CFE !important;
+}
+
+/* ── Alerts — mais integrados ─────────────────────────────────────────────── */
+[data-testid="stAlert"] {
+  border-radius: 12px !important;
+  font-size: 13px !important;
+}
+
+/* ── Caption text — mais legível ──────────────────────────────────────────── */
+[data-testid="stCaptionContainer"] {
+  color: #9CA3AF !important;
 }
 
 /* ── Sidebar misc ─────────────────────────────────────────────────────────── */

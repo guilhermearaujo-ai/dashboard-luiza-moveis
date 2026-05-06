@@ -127,7 +127,7 @@ def show(df):
     rank = rank.rename(columns={
         "Posicao":      "Pos.",
         "vendedor":     "Vendedor",
-        "vendas":       "Unidades",
+        "vendas":       "Pedidos",
         "faturamento":  "Faturamento",
         "ticket_medio": "Ticket Medio",
         "share":        "Share",

@@ -205,8 +205,7 @@ if not st.session_state.logged_in:
 
             st.markdown(
                 '<p style="font-size:11px;color:#9CA3AF;margin-top:16px;line-height:1.8">'
-                '🔑 <b>admin@noxer.com.br</b> / noxer2026<br>'
-                '🔑 <b>luiza@luizamoveis.com.br</b> / vendas123</p>',
+                'Acesso restrito. Entre com suas credenciais.</p>',
                 unsafe_allow_html=True,
             )
 
@@ -214,6 +213,7 @@ if not st.session_state.logged_in:
             if USERS.get(email.strip()) == password:
                 st.session_state.logged_in   = True
                 st.session_state.login_error = False
+                st.session_state.user_email  = email.strip()
                 st.rerun()
             else:
                 st.session_state.login_error = True
@@ -270,10 +270,18 @@ with st.sidebar:
     st.markdown(_svg_img_tag("assets/logo1.svg", max_width="140px"), unsafe_allow_html=True)
     st.markdown('<hr class="sb-div"/>', unsafe_allow_html=True)
 
+    # Diagnóstico só aparece para admin
+    _is_admin = st.session_state.get("user_email", "") == "admin@noxer.com.br"
+    _menu_opts  = ["Dashboard", "Produtos", "Campanhas", "Comercial", "Dicionário de SKUs"]
+    _menu_icons = ["bar-chart-line", "box-seam", "megaphone", "people", "book"]
+    if _is_admin:
+        _menu_opts.append("Diagnóstico")
+        _menu_icons.append("bug")
+
     page = option_menu(
         menu_title=None,
-        options=["Dashboard", "Produtos", "Campanhas", "Comercial", "Dicionário de SKUs", "Diagnóstico"],
-        icons=["bar-chart-line", "box-seam", "megaphone", "people", "book", "bug"],
+        options=_menu_opts,
+        icons=_menu_icons,
         default_index=0,
         styles={
             "container":        {"padding": "4px 0", "background-color": "transparent"},
@@ -296,20 +304,37 @@ with st.sidebar:
 
     st.markdown('<hr class="sb-div"/>', unsafe_allow_html=True)
 
-    if st.button("Desconectar Bling", use_container_width=True):
-        clear_tokens()
-        st.cache_data.clear()
-        st.session_state.pop("_bling_code_processed", None)  # permite nova autorização
-        st.rerun()
+    # Botão Desconectar com confirmação
+    if "confirm_disconnect" not in st.session_state:
+        st.session_state.confirm_disconnect = False
+
+    if st.session_state.confirm_disconnect:
+        st.warning("Tem certeza? Isso vai exigir re-autorização.")
+        col_y, col_n = st.columns(2)
+        with col_y:
+            if st.button("Sim", use_container_width=True, key="yes_disconnect"):
+                clear_tokens()
+                st.cache_data.clear()
+                st.session_state.pop("_bling_code_processed", None)
+                st.session_state.confirm_disconnect = False
+                st.rerun()
+        with col_n:
+            if st.button("Não", use_container_width=True, key="no_disconnect"):
+                st.session_state.confirm_disconnect = False
+                st.rerun()
+    else:
+        if st.button("Desconectar Bling", use_container_width=True):
+            st.session_state.confirm_disconnect = True
+            st.rerun()
 
     if st.button("Sair", use_container_width=True):
         st.session_state.logged_in   = False
         st.session_state.login_error = False
+        st.session_state.user_email  = ""
         st.rerun()
 
     st.markdown("---")
-    st.info("V3 - Mapeamento Ativo")
-    st.markdown('<div class="sb-footer">v2.2.0 · Meta real · Bling real</div>',
+    st.markdown('<div class="sb-footer">Noxer · v2.3.0</div>',
                 unsafe_allow_html=True)
 
 # ── Flash de conexão bem-sucedida ──────────────────────────────────────────────

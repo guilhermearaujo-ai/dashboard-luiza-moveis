@@ -41,10 +41,13 @@ def _build_sku_performance(df) -> "pd.DataFrame":
     if df_meta.empty:
         return pd.DataFrame()
 
+    # Divide custo proporcionalmente pelo número de SKUs no anúncio
+    df_meta["n_skus"] = df_meta["skus"].apply(len)
+    df_meta["spend_per_sku"] = df_meta["spend"] / df_meta["n_skus"]
     df_meta = df_meta.explode("skus").rename(columns={"skus": "sku"})
     meta_by_sku = (
         df_meta.groupby("sku", as_index=False)
-        .agg(custo=("spend", "sum"))
+        .agg(custo=("spend_per_sku", "sum"))
     )
 
     result = meta_by_sku.copy()
