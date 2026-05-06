@@ -373,7 +373,7 @@ def _construir_itens(pedidos: list[dict], detalhes: dict, vendedores_map: dict) 
                     unit_price = _to_float(item.get("valor", 0))
                     line_total = round(qty * unit_price, 2)
                     items_sum += line_total
-                    sku        = (item.get("codigo") or "").strip()
+                    sku        = (item.get("codigo") or produto.get("codigo") or "").strip()
 
                     rows.append({
                         "date":         order_date,

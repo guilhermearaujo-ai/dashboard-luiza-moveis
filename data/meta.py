@@ -92,13 +92,20 @@ def load_meta_data():
 def extract_skus_from_ad_name(ad_name: str) -> list:
     """
     Extrai lista de SKUs do nome do anúncio seguindo a taxonomia:
-    ID_CATEGORIA_NOME_[SKUs]  →  ex: AD001_mesa_ametista_173319-173320
+    ID_CATEGORIA_NOME_[SKUs]
 
-    Retorna lista de strings numéricas (ex: ['173319', '173320'])
-    ou [] se o padrão não for identificado.
+    Exemplos reais:
+      AD0016_sofas_gold_173321168-173321169-173321170
+      AD0017_sofas_pop_173319783-173319784-173319945,173320219-173320291
+
+    SKUs separados por '-' (dash) e/ou ',' (vírgula).
+    Retorna lista de strings numéricas ou [] se o padrão não for identificado.
     """
+    import re
     parts = str(ad_name).strip().split("_")
-    if len(parts) < 2:
+    if len(parts) < 4:
         return []
     sku_part = parts[-1]
-    return [s.strip() for s in sku_part.split("-") if s.strip().isdigit()]
+    # Separa por '-' ou ',' para cobrir ambos os separadores
+    tokens = re.split(r"[-,]", sku_part)
+    return [t.strip() for t in tokens if t.strip().isdigit()]
