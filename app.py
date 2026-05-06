@@ -169,7 +169,8 @@ if _bling_code and not _code_already_used:
 
 # ── Fallback: se bling_tokens.json existe e é válido, loga automaticamente ────
 # Cobre o caso de refresh de página ou nova aba com token já salvo em disco.
-if not st.session_state.logged_in and has_valid_tokens():
+# NÃO faz auto-login se o usuário clicou "Sair" manualmente.
+if not st.session_state.logged_in and has_valid_tokens() and not st.session_state.get("_manually_logged_out"):
     st.session_state.logged_in = True
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -211,9 +212,10 @@ if not st.session_state.logged_in:
 
         if submitted:
             if USERS.get(email.strip()) == password:
-                st.session_state.logged_in   = True
-                st.session_state.login_error = False
-                st.session_state.user_email  = email.strip()
+                st.session_state.logged_in            = True
+                st.session_state.login_error          = False
+                st.session_state.user_email           = email.strip()
+                st.session_state._manually_logged_out = False
                 st.rerun()
             else:
                 st.session_state.login_error = True
@@ -328,9 +330,10 @@ with st.sidebar:
             st.rerun()
 
     if st.button("Sair", use_container_width=True):
-        st.session_state.logged_in   = False
-        st.session_state.login_error = False
-        st.session_state.user_email  = ""
+        st.session_state.logged_in          = False
+        st.session_state.login_error        = False
+        st.session_state.user_email         = ""
+        st.session_state._manually_logged_out = True
         st.rerun()
 
     st.markdown("---")
