@@ -266,12 +266,16 @@ def _construir_itens(pedidos: list[dict], detalhes: dict, vendedores_map: dict) 
             vendedor    = _vendedor_nome(detalhe, vendedores_map) if detalhe else p.get("vendedor_lista", "Venda Direta")
             itens       = detalhe.get("itens") or []
 
-            # ── Extrai loja pelo ID numérico ─────────────────────────────────
-            _loja_obj = detalhe.get("loja") or {}
-            _loja_id  = str(_loja_obj.get("id", "")).strip() if isinstance(_loja_obj, dict) else ""
-            # Se vier qualquer ID de loja, o usuário confirmou que só usa
-            # "WhatsApp - Meta Ads" como canal externo — mapeamento direto.
-            if _loja_id:
+            # ── Extrai loja — mapeamento robusto ────────────────────────────
+            loja_raw = detalhe.get("loja") or {}
+            if isinstance(loja_raw, dict):
+                l_id   = str(loja_raw.get("id", "")).strip()
+                l_desc = str(loja_raw.get("descricao", "")).lower()
+            else:
+                l_id   = str(loja_raw).strip()
+                l_desc = str(loja_raw).lower()
+
+            if l_id or "whatsapp" in l_desc or "meta" in l_desc:
                 loja_nome = "WhatsApp - Meta Ads"
             else:
                 loja_nome = "Outros"
