@@ -28,9 +28,15 @@ _BASE_URL   = "https://www.bling.com.br/Api/v3/pedidos/vendas"
 _PAGE_SIZE  = 100
 _CANCELLED  = {"cancelado", "cancelada", "cancelados", "cancelamento"}
 _CACHE_FILE = "data/bling_cache.json"
+_LOJAS_CACHE: dict = {}   # {id: descricao} — preenchido uma vez por carga
 
 _COLUMNS = ["date", "order_id", "product_name",
             "quantity", "unit_price", "total_price", "vendedor", "loja", "sku", "_bling_key"]
+
+# IDs e termos que identificam a loja de tráfego pago.
+# Preenchido dinamicamente via _fetch_lojas() ou manualmente se necessário.
+_TRAFICO_LOJA_IDS: set = set()
+_TRAFICO_KEYWORDS = {"whatsapp", "meta", "trafego", "tráfego"}
 
 
 # ── Helpers ────────────────────────────────────────────────────────────────────
@@ -89,6 +95,40 @@ def _save_cache(detalhes: dict) -> None:
         print(f"[Cache] {len(detalhes)} pedidos salvos em {_CACHE_FILE}.")
     except Exception as exc:
         print(f"[Cache] Falha ao salvar cache: {exc}")
+
+
+def _fetch_lojas(token: str) -> dict:
+    """
+    GET /depositos ou busca genérica para mapear IDs de lojas/canais de venda.
+    Retorna {loja_id: descricao} para todas as lojas.
+    Identifica automaticamente quais IDs pertencem ao tráfego pago.
+    """
+    global _LOJAS_CACHE, _TRAFICO_LOJA_IDS
+
+    # Tenta o endpoint de depositos (canais de venda) da API v3
+    for endpoint in [
+        "https://www.bling.com.br/Api/v3/depositos",
+    ]:
+        try:
+            resp = requests.get(endpoint, headers=_headers(token), timeout=15)
+            if resp.status_code == 200:
+                data = resp.json().get("data", [])
+                for item in data:
+                    lid = item.get("id")
+                    desc = (item.get("descricao") or item.get("nome") or "").strip()
+                    if lid:
+                        _LOJAS_CACHE[int(lid)] = desc
+                        # Detecta automaticamente lojas de tráfego
+                        desc_lower = desc.lower()
+                        if any(kw in desc_lower for kw in _TRAFICO_KEYWORDS):
+                            _TRAFICO_LOJA_IDS.add(int(lid))
+                print(f"[Bling] {len(_LOJAS_CACHE)} lojas/depósitos carregados: {_LOJAS_CACHE}")
+                print(f"[Bling] IDs de tráfego identificados: {_TRAFICO_LOJA_IDS}")
+                break
+        except Exception as exc:
+            print(f"[Bling] Erro ao buscar lojas de {endpoint}: {exc}")
+
+    return _LOJAS_CACHE
 
 
 def _fetch_vendedores(token: str) -> dict:
@@ -267,24 +307,45 @@ def _construir_itens(pedidos: list[dict], detalhes: dict, vendedores_map: dict) 
             itens       = detalhe.get("itens") or []
 
             # ── Extrai loja — mapeamento robusto ────────────────────────────
-            loja_raw = detalhe.get("loja") or {}
-            if isinstance(loja_raw, dict):
-                l_id   = str(loja_raw.get("id", "")).strip()
-                l_desc = str(loja_raw.get("descricao", "")).lower()
-            else:
-                l_id   = str(loja_raw).strip()
-                l_desc = str(loja_raw).lower()
+            # Estratégia em 3 camadas:
+            #   1. ID da loja bate com _TRAFICO_LOJA_IDS (detectado via /depositos)
+            #   2. Descrição da loja contém palavras-chave de tráfego
+            #   3. Fallback por vendedor (ex: Kariny = tráfego)
+            loja_nome = "Outros"
+            loja_raw = detalhe.get("loja")
 
-            if l_id or "whatsapp" in l_desc or "meta" in l_desc:
-                loja_nome = "WhatsApp - Meta Ads"
-            else:
-                # Fallback por vendedor: se loja vier nula mas o vendedor for
-                # reconhecido como responsável pelo tráfego pago, classifica.
+            # Tenta também campos alternativos da API v3
+            if loja_raw is None:
+                loja_raw = detalhe.get("canal") or detalhe.get("lojaVirtual")
+
+            if loja_raw is not None:
+                if isinstance(loja_raw, dict):
+                    l_id   = loja_raw.get("id")
+                    l_desc = str(loja_raw.get("descricao", loja_raw.get("nome", ""))).lower().strip()
+                elif isinstance(loja_raw, (int, float)):
+                    l_id   = int(loja_raw)
+                    l_desc = ""
+                else:
+                    l_id   = None
+                    l_desc = str(loja_raw).lower().strip()
+
+                # Camada 1: ID exato
+                if l_id is not None and int(l_id) in _TRAFICO_LOJA_IDS:
+                    loja_nome = "WhatsApp - Meta Ads"
+                # Camada 2: palavra-chave na descrição
+                elif any(kw in l_desc for kw in _TRAFICO_KEYWORDS):
+                    loja_nome = "WhatsApp - Meta Ads"
+                # Se tem loja mas não é de tráfego, registra a descrição real
+                elif l_desc:
+                    loja_nome = l_desc.title()
+                elif l_id is not None and _LOJAS_CACHE.get(int(l_id)):
+                    loja_nome = _LOJAS_CACHE[int(l_id)]
+
+            # Camada 3: fallback por vendedor
+            if loja_nome == "Outros":
                 _vend_lower = vendedor.lower()
                 if "kariny" in _vend_lower:
                     loja_nome = "WhatsApp - Meta Ads"
-                else:
-                    loja_nome = "Outros"
 
             # ── Itens do pedido ──────────────────────────────────────────────
             if itens:
@@ -374,7 +435,8 @@ def fetch_bling_orders(start_date: date, end_date: date) -> pd.DataFrame:
     ed = end_date.strftime("%Y-%m-%d")
     print(f"[Bling] Período: {sd} → {ed}")
 
-    # ── Pré-carga de vendedores (1 chamada, mapa {id: nome}) ─────────────────
+    # ── Pré-carga de lojas e vendedores (1 chamada cada) ─────────────────────
+    _fetch_lojas(token)
     vendedores_map = _fetch_vendedores(token)
 
     # ── Etapa 1 ───────────────────────────────────────────────────────────────

@@ -13,7 +13,7 @@ from streamlit_option_menu import option_menu
 
 from data.bling_auth import clear_tokens, exchange_code, get_auth_url, has_valid_tokens
 from data.loader import load_data
-from views import campanhas, comercial, dashboard, produtos, sku_dictionary
+from views import campanhas, comercial, dashboard, diagnostico, produtos, sku_dictionary
 
 # ── Brand palette ──────────────────────────────────────────────────────────────
 NOXER_BLUE  = "#005CFE"
@@ -280,8 +280,8 @@ with st.sidebar:
 
     page = option_menu(
         menu_title=None,
-        options=["Dashboard", "Produtos", "Campanhas", "Comercial", "Dicionário de SKUs"],
-        icons=["bar-chart-line", "box-seam", "megaphone", "people", "book"],
+        options=["Dashboard", "Produtos", "Campanhas", "Comercial", "Dicionário de SKUs", "Diagnóstico"],
+        icons=["bar-chart-line", "box-seam", "megaphone", "people", "book", "bug"],
         default_index=0,
         styles={
             "container":        {"padding": "4px 0", "background-color": "transparent"},
@@ -317,12 +317,16 @@ with st.sidebar:
 
     st.markdown("---")
     st.info("V3 - Mapeamento Ativo")
-    st.markdown('<div class="sb-footer">v2.1.0 · Meta real · Bling mock</div>',
+    st.markdown('<div class="sb-footer">v2.2.0 · Meta real · Bling real</div>',
                 unsafe_allow_html=True)
 
-# ── Dicionário de SKUs — não precisa de filtros nem do df ─────────────────────
+# ── Páginas que não precisam de filtros nem do df ─────────────────────────────
 if page == "Dicionário de SKUs":
     sku_dictionary.show()
+    st.stop()
+
+if page == "Diagnóstico":
+    diagnostico.show()
     st.stop()
 
 # ── Filter bar (apenas para abas analíticas) ───────────────────────────────────

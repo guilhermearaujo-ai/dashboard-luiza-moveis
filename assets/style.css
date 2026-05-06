@@ -18,18 +18,30 @@ html, body, [class*="css"] {
   max-width:      1400px !important;
 }
 
-/* Esconde elementos nativos do Streamlit */
+/* Esconde elementos nativos do Streamlit (exceto sidebar e header) */
 #MainMenu,
 footer,
 [data-testid="stToolbar"],
 [data-testid="stDecoration"] {
   visibility: hidden !important;
 }
+/* Garante que o header nativo fique visível no dashboard */
+[data-testid="stHeader"] {
+  visibility: visible !important;
+  display: block !important;
+}
 
-/* ── Sidebar ──────────────────────────────────────────────────────────────── */
+/* ── Sidebar — forçar visibilidade (corrige bug de CSS cacheado do login) ── */
 [data-testid="stSidebar"] {
+  display: flex !important;
+  visibility: visible !important;
+  opacity: 1 !important;
   background: #FFFFFF !important;
   border-right: 1px solid #E5E7EB !important;
+}
+[data-testid="collapsedControl"] {
+  display: flex !important;
+  visibility: visible !important;
 }
 
 section[data-testid="stSidebar"] > div:first-child {

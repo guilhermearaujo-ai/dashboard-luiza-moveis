@@ -362,7 +362,7 @@ def _merge(meta: pd.DataFrame, bling: pd.DataFrame) -> pd.DataFrame:
 
     print(f"[Match] Vendas mapeadas: {matched_meta} de {total_meta} linhas Meta | "
           f"{len(bling_direct)} linhas Bling Direto adicionadas.")
-    print(f"DEBUG: Vendedores encontrados: {df[df['campaign_name'] == 'Bling Direto']['vendedor'].unique().tolist()}")
+    print(f"[Match] Vendedores Bling Direto: {df[df['campaign_name'] == 'Bling Direto']['vendedor'].unique().tolist()}")
 
     return df.reset_index(drop=True)
 
