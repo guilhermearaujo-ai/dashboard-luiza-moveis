@@ -34,8 +34,8 @@ _COLUMNS = ["date", "order_id", "product_name",
             "quantity", "unit_price", "total_price", "vendedor", "loja", "sku", "_bling_key"]
 
 # IDs e termos que identificam a loja de tráfego pago.
-# Preenchido dinamicamente via _fetch_lojas() ou manualmente se necessário.
-_TRAFICO_LOJA_IDS: set = set()
+# ID 206032703 = "WhatsApp - Meta Ads" (confirmado no painel Bling)
+_TRAFICO_LOJA_IDS: set = {206032703}
 _TRAFICO_KEYWORDS = {"whatsapp", "meta", "trafego", "tráfego"}
 
 
